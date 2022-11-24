@@ -6,7 +6,7 @@ function Get-EngineList {
 		[Parameter(Mandatory = $true)]
 		[string] $portal,
 		[Parameter(Mandatory = $true)]
-		[SecureString] $credentials
+		[System.Management.Automation.PSCredential]$credentials
 	)
 	$web = [Net.WebClient]::new()
 	$web.Credentials = $credentials
@@ -109,20 +109,30 @@ Function Invoke-Nxql {
 Function Get-NxqlExport {
 	param (
 		[Parameter(Mandatory = $true)]
-		[string] $query,
+		[String] $Query,
 		[Parameter(Mandatory = $true)]
-		[SecureString] $credentials,
+		[System.Management.Automation.PSCredential] $credentials,
 		[Parameter(Mandatory = $true)]
-		$webapiPort
+		[String]$webapiPort,
+		[Parameter(Mandatory = $true)]
+		$EngineList
 	)
 	$counter = 0
-	foreach ($engine in $activeEngines) {
+	foreach ($engine in $EngineList) {
 		if ($counter -eq 0) {
-			$out = (Invoke-Nxql -ServerName $engine.address -PortNumber $webapiPort -UserName $username -UserPassword $password -Query $Query)
+			$out = (Invoke-Nxql -ServerName $engine.address `
+								-PortNumber $webapiPort `
+								-UserName $credentials.UserName `
+								-UserPassword $credentials.GetNetworkCredential().Password `
+								-Query $Query)
 			$out.Split("`n")[0..($out.Split("`n").count - 2)]
 		}
 		else {
-			$out = (Invoke-Nxql -ServerName $engine.address -PortNumber $webapiPort -UserName $username -UserPassword $password -Query $Query)
+			$out = (Invoke-Nxql -ServerName $engine.address `
+								-PortNumber $webapiPort `
+								-UserName $credentials.UserName `
+								-UserPassword $credentials.GetNetworkCredential().Password `
+								-Query $Query)
 			$out.Split("`n")[1..($out.Split("`n").count - 2)]
 		}
 		$counter = 1
