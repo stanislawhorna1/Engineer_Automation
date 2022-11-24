@@ -63,9 +63,7 @@ Function Invoke-Nxql {
 		[Parameter(Mandatory = $true)]
 		[string]$ServerName,
 		[Parameter(Mandatory = $true)]
-		[string]$UserName,
-		[Parameter(Mandatory = $true)]
-		[string]$UserPassword,
+		[System.Management.Automation.PSCredential]$credentials,
 		[Parameter(Mandatory = $true)]
 		[string]$Query,
 		[Parameter(Mandatory = $false)]
@@ -98,7 +96,7 @@ Function Invoke-Nxql {
 		[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls11
 		[Net.ServicePointManager]::ServerCertificateValidationCallback = { $true } 
 		$webclient = New-Object system.net.webclient
-		$webclient.Credentials = New-Object System.Net.NetworkCredential($UserName, $UserPassword)
+		$webclient.Credentials = New-Object System.Net.NetworkCredential($Credentials.UserName, $credentials.GetNetworkCredential().Password)
 		$webclient.DownloadString($Url)
 	}
 	catch {
@@ -122,16 +120,14 @@ Function Get-NxqlExport {
 		if ($counter -eq 0) {
 			$out = (Invoke-Nxql -ServerName $engine.address `
 								-PortNumber $webapiPort `
-								-UserName $credentials.UserName `
-								-UserPassword $credentials.GetNetworkCredential().Password `
+								-credentials $credentials, `
 								-Query $Query)
 			$out.Split("`n")[0..($out.Split("`n").count - 2)]
 		}
 		else {
 			$out = (Invoke-Nxql -ServerName $engine.address `
 								-PortNumber $webapiPort `
-								-UserName $credentials.UserName `
-								-UserPassword $credentials.GetNetworkCredential().Password `
+								-credentials $credentials, `
 								-Query $Query)
 			$out.Split("`n")[1..($out.Split("`n").count - 2)]
 		}
