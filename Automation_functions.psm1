@@ -119,21 +119,52 @@ Function Get-NxqlExport {
 	foreach ($engine in $EngineList) {
 		if ($counter -eq 0) {
 			$out = (Invoke-Nxql -ServerName $engine.address `
-								-PortNumber $webapiPort `
-								-credentials $credentials, `
-								-Query $Query)
+					-PortNumber $webapiPort `
+					-credentials $credentials, `
+					-Query $Query)
 			$out.Split("`n")[0..($out.Split("`n").count - 2)]
 		}
 		else {
 			$out = (Invoke-Nxql -ServerName $engine.address `
-								-PortNumber $webapiPort `
-								-credentials $credentials, `
-								-Query $Query)
+					-PortNumber $webapiPort `
+					-credentials $credentials, `
+					-Query $Query)
 			$out.Split("`n")[1..($out.Split("`n").count - 2)]
 		}
 		$counter = 1
 	}
 };
+
+function Invoke-HashTableSort {
+	param (
+		[Parameter(Mandatory = $true)]
+		[System.Collections.Hashtable]$hashtable,
+		[Parameter(Mandatory = $false)]
+		[int]$index,
+		[Parameter(Mandatory = $false)]
+		[switch]$Descending
+	)
+	if ($index) {
+		if ($Descending) {
+			$hashSorted = [ordered] @{}
+			$hashtable.GetEnumerator() | Sort-Object { $_.Value[$index] } -Descending | ForEach-Object { $hashSorted[$_.Key] = $_.Value }
+		}
+		else {
+			$hashSorted = [ordered] @{}
+			$hashtable.GetEnumerator() | Sort-Object { $_.Value[$index] } | ForEach-Object { $hashSorted[$_.Key] = $_.Value }
+		}
+	}else {
+		if ($Descending) {
+			$hashSorted = [ordered] @{}
+			$hashtable.GetEnumerator() | Sort-Object { $_.Value } -Descending | ForEach-Object { $hashSorted[$_.Key] = $_.Value }
+		}
+		else {
+			$hashSorted = [ordered] @{}
+			$hashtable.GetEnumerator() | Sort-Object { $_.Value } | ForEach-Object { $hashSorted[$_.Key] = $_.Value }
+		}
+	}
+	$hashSorted
+}
 
 Function Invoke-Popup {
 	param (
@@ -151,7 +182,56 @@ Function Invoke-Popup {
 	$endmsg.ShowBalloonTip(10)
 };
 
-
+function Invoke-ExcelFileUpdate {
+	param (
+		[Parameter(Mandatory = $true)]
+		[string] $SourceFile,
+		[Parameter(Mandatory = $true)]
+		[String] $DestinationFile
+	)
+	# Test if file already exist
+	if ((Test-Path -Path $DestinationFile) -eq $true) {
+		Remove-item -path $DestinationFile -Confirm:$false -Force
+	}
+	# Copy template to destination location
+	Copy-Item -Path $SourceFile -Destination $DestinationFile | Out-Null
+	# Open Excel App
+	$excel = New-Object -ComObject Excel.Application
+	$excel.Visible = $false
+	$excel.DisplayAlerts = $false
+	Start-Sleep -Seconds 2
+	# Open Excel file
+	$work = $excel.Workbooks.Open($DestinationFile)
+	Start-Sleep -Seconds 2
+	$connections = $work.connections
+	# Refresh existing Table Queries
+	$work.RefreshAll()
+	Start-Sleep -Seconds 2
+	while ($connections | ForEach-Object { if ($_.OLEDBConnection.Refreshing) { $true } }) {
+		Start-Sleep -Milliseconds 500
+	}
+	Start-Sleep -Seconds 2
+	# Get list of available sheets in file
+	$list_sheets = $work.Worksheets | Select-Object name, index
+	# For Each sheet update Pivot table if exist
+	foreach ($sheet in $list_sheets) {
+		$sh = $work.Worksheets.Item($sheet.Name)
+		$pivots = $sh.PivotTables()
+		for ($i = 1; $i -le $pivots.Count; $i++ ) {
+			$pivots.Item($i).RefreshTable() | Out-Null
+		}
+	}
+	# Get number of Table Queries
+	$num_of_queries_to_delete = ($work.Queries).Count
+	# Brake All Table Queries
+	for ($i = 1; $i -le $num_of_queries_to_delete; $i++) {
+		$work.Queries.Item(1).Delete()
+	}
+	# Save all done work and close file and Application
+	$work.Save()
+	$work.Close()
+	$excel.Quit()
+};
 
 
 
@@ -212,49 +292,6 @@ foreach ($col in $column_name) {
 }
 
 
-####################################################################
-##  UPDATE EXCEL FILE
-####################################################################
-
-
-$excel = New-Object -ComObject Excel.Application
-$excel.Visible = $false
-$excel.DisplayAlerts = $false
-Start-Sleep -Seconds 5
-$work = $excel.Workbooks.Open($Excel_file)
-Start-Sleep -Seconds 5
-$connections = $work.connections
-$work.RefreshAll()
-while($connections | ForEach-Object {if($_.OLEDBConnection.Refreshing){$true}}){
-	Start-Sleep -Milliseconds 500
-}
-Start-Sleep -seconds 10
-$list_sheets = $work.Worksheets | Select-Object name, index
-foreach($sheet in $list_sheets){
-	$sh = $work.Worksheets.Item($sheet.Name)
-	$pivots = $sh.PivotTables()
-	for($i=1; $i -le $pivots.Count; $i++ ){
-		$pivots.Item($i).RefreshTable() | Out-Null
-	}
-}
-$num_of_queries_to_delete = ($work.Queries).Count
-for ($i = 1; $i -le $num_of_queries_to_delete; $i++) {
-	$work.Queries.Item(1).Delete()
-}
-$work.Save()
-$work.Close()
-$excel.Quit()
-Remove-Variable excel
-Remove-Variable work
-
-$date = (Get-Date).ToString("yyyy-MM-dd")
-$destination_excel_file = $location + "\Output\" + $date + " NexThink Reports.xlsb"
-
-copy-item -path $Excel_file -Destination $destination_excel_file
-
-####################################################################
-##  UPDATE EXCEL FILE
-####################################################################
 
 
 ####################################################################
@@ -268,26 +305,26 @@ $connections = $work.connections
 # Refresh all tables related to the source file
 $work.RefreshAll()
 # Wait until all tables will be refreshed
-while($connections | ForEach-Object {if($_.OLEDBConnection.Refreshing){$true}}){
+while ($connections | ForEach-Object { if ($_.OLEDBConnection.Refreshing) { $true } }) {
 	Start-Sleep -Milliseconds 500
 }
 Start-Sleep -seconds 10
 $excel.DisplayAlerts = $false
-if((test-path $Output_folder\merge)-eq $true){
-Remove-item -path $Output_folder\merge -Confirm:$false -Recurse -Force
+if ((test-path $Output_folder\merge) -eq $true) {
+	Remove-item -path $Output_folder\merge -Confirm:$false -Recurse -Force
 }
 new-item -Type Directory $Output_folder\merge
 
-if((test-path "C:\temp\MS_Teams_update_report\merge\new.csv")-eq $true){
-Remove-item -path "C:\temp\MS_Teams_update_report\merge\new.csv"
+if ((test-path "C:\temp\MS_Teams_update_report\merge\new.csv") -eq $true) {
+	Remove-item -path "C:\temp\MS_Teams_update_report\merge\new.csv"
 }
 $work.Sheets.Item("MS Teams Reinstall").SaveAs("C:\temp\MS_Teams_update_report\merge\new.csv", 6)
 $work.Close()
 $Output_reports = $location + "\Output\"
 $Latest_excel = (Get-ChildItem -Path $Output_reports | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
 $work = $excel.Workbooks.Open($Latest_excel)
-if((test-path "C:\temp\MS_Teams_update_report\merge\old.csv")-eq $true){
-Remove-item -path "C:\temp\MS_Teams_update_report\merge\old.csv"
+if ((test-path "C:\temp\MS_Teams_update_report\merge\old.csv") -eq $true) {
+	Remove-item -path "C:\temp\MS_Teams_update_report\merge\old.csv"
 }
 $work.Sheets.Item("MS Teams campaign").SaveAs("C:\temp\MS_Teams_update_report\merge\old.csv", 6)
 $work.Close()
@@ -300,14 +337,14 @@ $work.Close()
 ##  Merge CSV files
 ####################################################################
 
-if((test-path "$Output_folder\Ready_output.csv")-eq $true){
-Remove-item -path "$Output_folder\Ready_output.csv"
+if ((test-path "$Output_folder\Ready_output.csv") -eq $true) {
+	Remove-item -path "$Output_folder\Ready_output.csv"
 }
 $new = Import-Csv -Path $Output_folder\merge\new.csv
 $old = Import-Csv -Path $Output_folder\merge\old.csv
 $ready_out = $old + $new
-$ready_out = ($ready_out | Group-Object device/name | ForEach-Object {$_.Group | Select-Object -First 1 })
-$ready_out |Export-Csv -Path $Output_folder\Ready_output.txt -NoTypeInformation
+$ready_out = ($ready_out | Group-Object device/name | ForEach-Object { $_.Group | Select-Object -First 1 })
+$ready_out | Export-Csv -Path $Output_folder\Ready_output.txt -NoTypeInformation
 
 ####################################################################
 ##  Merge CSV files
