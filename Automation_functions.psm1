@@ -204,3 +204,108 @@ foreach ($col in $column_name) {
 		Add-content $calc_f_name $out
 	}
 }
+
+
+####################################################################
+##  UPDATE EXCEL FILE
+####################################################################
+
+
+$excel = New-Object -ComObject Excel.Application
+$excel.Visible = $false
+$excel.DisplayAlerts = $false
+$work = $excel.Workbooks.Open($Excel_file)
+$connections = $work.connections
+$work.RefreshAll()
+while($connections | ForEach-Object {if($_.OLEDBConnection.Refreshing){$true}}){
+	Start-Sleep -Milliseconds 500
+}
+Start-Sleep -seconds 10
+
+foreach($s in $sheet_with_pivots){
+	$sheet = $work.Worksheets.Item($s)
+	$pivots = $sheet.PivotTables()
+	for($i=1; $i -le $pivots.Count; $i++ ){
+		$pivots.Item($i).RefreshTable() 
+	}
+}
+$num_of_queries_to_delete = ($work.Queries).Count
+Write-Host $num_of_queries_to_delete
+for ($i = 1; $i -le $num_of_queries_to_delete; $i++) {
+	$work.Queries.Item(1).Delete()
+	Write-Host $i
+}
+
+
+$work.Save()
+$work.Close()
+$excel.Quit()
+Remove-Variable excel
+Remove-Variable work
+
+
+$date = (Get-Date).ToString("yyyy-MM-dd")
+$destination_excel_file = $location + "\Output\" + $date + " NexThink Reports.xlsb"
+
+copy-item -path $Excel_file -Destination $destination_excel_file
+
+####################################################################
+##  UPDATE EXCEL FILE
+####################################################################
+
+
+####################################################################
+##  RETRIEVE OLD DATA FROM EXCEL FILE
+####################################################################
+# Open Excel Application
+$excel = New-Object -ComObject Excel.Application
+$excel.Visible = $false
+$work = $excel.Workbooks.Open($Excel_file)
+$connections = $work.connections
+# Refresh all tables related to the source file
+$work.RefreshAll()
+# Wait until all tables will be refreshed
+while($connections | ForEach-Object {if($_.OLEDBConnection.Refreshing){$true}}){
+	Start-Sleep -Milliseconds 500
+}
+Start-Sleep -seconds 10
+$excel.DisplayAlerts = $false
+if((test-path $Output_folder\merge)-eq $true){
+Remove-item -path $Output_folder\merge -Confirm:$false -Recurse -Force
+}
+new-item -Type Directory $Output_folder\merge
+
+if((test-path "C:\temp\MS_Teams_update_report\merge\new.csv")-eq $true){
+Remove-item -path "C:\temp\MS_Teams_update_report\merge\new.csv"
+}
+$work.Sheets.Item("MS Teams Reinstall").SaveAs("C:\temp\MS_Teams_update_report\merge\new.csv", 6)
+$work.Close()
+$Output_reports = $location + "\Output\"
+$Latest_excel = (Get-ChildItem -Path $Output_reports | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
+$work = $excel.Workbooks.Open($Latest_excel)
+if((test-path "C:\temp\MS_Teams_update_report\merge\old.csv")-eq $true){
+Remove-item -path "C:\temp\MS_Teams_update_report\merge\old.csv"
+}
+$work.Sheets.Item("MS Teams campaign").SaveAs("C:\temp\MS_Teams_update_report\merge\old.csv", 6)
+$work.Close()
+
+####################################################################
+##  RETRIEVE OLD DATA FROM EXCEL FILE
+####################################################################
+
+####################################################################
+##  Merge CSV files
+####################################################################
+
+if((test-path "$Output_folder\Ready_output.csv")-eq $true){
+Remove-item -path "$Output_folder\Ready_output.csv"
+}
+$new = Import-Csv -Path $Output_folder\merge\new.csv
+$old = Import-Csv -Path $Output_folder\merge\old.csv
+$ready_out = $old + $new
+$ready_out = ($ready_out | Group-Object device/name | ForEach-Object {$_.Group | Select-Object -First 1 })
+$ready_out |Export-Csv -Path $Output_folder\Ready_output.txt -NoTypeInformation
+
+####################################################################
+##  Merge CSV files
+####################################################################
