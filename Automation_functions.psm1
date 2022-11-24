@@ -214,35 +214,32 @@ foreach ($col in $column_name) {
 $excel = New-Object -ComObject Excel.Application
 $excel.Visible = $false
 $excel.DisplayAlerts = $false
+Start-Sleep -Seconds 5
 $work = $excel.Workbooks.Open($Excel_file)
+Start-Sleep -Seconds 5
 $connections = $work.connections
 $work.RefreshAll()
 while($connections | ForEach-Object {if($_.OLEDBConnection.Refreshing){$true}}){
 	Start-Sleep -Milliseconds 500
 }
 Start-Sleep -seconds 10
-
-foreach($s in $sheet_with_pivots){
-	$sheet = $work.Worksheets.Item($s)
-	$pivots = $sheet.PivotTables()
+$list_sheets = $work.Worksheets | Select-Object name, index
+foreach($sheet in $list_sheets){
+	$sh = $work.Worksheets.Item($sheet.Name)
+	$pivots = $sh.PivotTables()
 	for($i=1; $i -le $pivots.Count; $i++ ){
-		$pivots.Item($i).RefreshTable() 
+		$pivots.Item($i).RefreshTable() | Out-Null
 	}
 }
 $num_of_queries_to_delete = ($work.Queries).Count
-Write-Host $num_of_queries_to_delete
 for ($i = 1; $i -le $num_of_queries_to_delete; $i++) {
 	$work.Queries.Item(1).Delete()
-	Write-Host $i
 }
-
-
 $work.Save()
 $work.Close()
 $excel.Quit()
 Remove-Variable excel
 Remove-Variable work
-
 
 $date = (Get-Date).ToString("yyyy-MM-dd")
 $destination_excel_file = $location + "\Output\" + $date + " NexThink Reports.xlsb"
