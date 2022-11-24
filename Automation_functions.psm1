@@ -272,23 +272,18 @@ function Export-ExcelToCsv {
 	$csv
 }
 
-
-
-
-
-
-
-
-
-
-# Extract Application names and stats from output
-$csv = Import-Csv -Path $Output_folder/$nxql_file_name -Delimiter "`t"
-foreach ($col in $column_name) {
+function Get-AverageAppStartupTime {
+	param (
+		[Parameter(Mandatory = $true)]
+		[System.Management.Automation.PSCustomObject]$SourceTable,
+		[Parameter(Mandatory = $true)]
+		[String]$ColumnName
+	)
 	$hash_all = @{}
-	for ($j = 0; $j -lt $csv.Count; $j++) {
-		if (($csv[$j].$col)[0] -ne "-") {
+	for ($j = 0; $j -lt $SourceTable.Count; $j++) {
+		if (($SourceTable[$j].$ColumnName)[0] -ne "-") {
 			# Extract line for all high impact application on device and remove ", " for applications where it is used in name
-			$line = (($csv[$j].$col) -replace ", ", "") -split ","
+			$line = (($SourceTable[$j].$ColumnName) -replace ", ", "") -split ","
 			$listed_apps = @()
 			for ($i = 0; $i -lt $line.Count; $i++) {
 				# Get app name and extract stats as array (miliseconds, MB)
@@ -309,10 +304,43 @@ foreach ($col in $column_name) {
 			}
 		}
 	}
-	# Sort Startup Apps descending by number of devices where it was detected
-	$hashSorted = [ordered] @{}
-	$hash_all.GetEnumerator() | Sort-Object { $_.Value[1] } -Descending | ForEach-Object { $hashSorted[$_.Key] = $_.Value }
-	$hash_all = $hashSorted
+	foreach ($app in $hash_all.Keys) {
+		$hash_all.$app[0] = [math]::Round((($hash_all.$app[0] / $hash_all.$app[1]) / 1000), 3)
+	}
+	$hash_all
+}
+
+function Remove-duplicates {
+	param (
+		[Parameter(Mandatory = $true)]
+		[System.Management.Automation.PSCustomObject]$SourceTable,
+		[Parameter(Mandatory = $true)]
+		[String]$ColumnNameGroup,
+		[Parameter(Mandatory = $false)]
+		[String]$ColumnNameSort,
+		[Parameter(Mandatory = $false)]
+		[switch]$Descending
+	)
+	if($ColumnNameSort){
+		if (Descending) {
+			$SourceTable = `
+			($SourceTable | Group-Object $ColumnNameGroup | `
+			ForEach-Object { $_.Group |Sort-Object $ColumnNameSort -Descending | `
+			Select-Object -First 1 })
+		}else{
+			$SourceTable = `
+			($SourceTable | Group-Object $ColumnNameGroup | `
+			ForEach-Object { $_.Group |Sort-Object $ColumnNameSort | `
+			Select-Object -First 1 })
+		}
+	}else{
+		$SourceTable = ($SourceTable | Group-Object $ColumnNameGroup | ForEach-Object { $_.Group | Select-Object -First 1 })
+	}
+	$SourceTable
+}
+
+
+
 	# Create file name based on column
 	$app_type = $col.Split("/")[1]
 	$calc_f_name = $calc_folder + $app_type + ".csv"
@@ -326,21 +354,3 @@ foreach ($col in $column_name) {
 		$out = "`"" + $app + "`",`"" + $avg + "`",`"" + $num_dev + "`""
 		Add-content $calc_f_name $out
 	}
-}
-
-####################################################################
-##  Merge CSV files
-####################################################################
-
-if ((test-path "$Output_folder\Ready_output.csv") -eq $true) {
-	Remove-item -path "$Output_folder\Ready_output.csv"
-}
-$new = Import-Csv -Path $Output_folder\merge\new.csv
-$old = Import-Csv -Path $Output_folder\merge\old.csv
-$ready_out = $old + $new
-$ready_out = ($ready_out | Group-Object device/name | ForEach-Object { $_.Group | Select-Object -First 1 })
-$ready_out | Export-Csv -Path $Output_folder\Ready_output.txt -NoTypeInformation
-
-####################################################################
-##  Merge CSV files
-####################################################################
