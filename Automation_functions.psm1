@@ -138,29 +138,29 @@ Function Get-NxqlExport {
 function Invoke-HashTableSort {
 	param (
 		[Parameter(Mandatory = $true)]
-		[System.Collections.Hashtable]$hashtable,
+		[System.Collections.Hashtable]$Hashtable,
 		[Parameter(Mandatory = $false)]
-		[int]$index,
+		[int]$Value_index,
 		[Parameter(Mandatory = $false)]
 		[switch]$Descending
 	)
 	if ($index) {
 		if ($Descending) {
 			$hashSorted = [ordered] @{}
-			$hashtable.GetEnumerator() | Sort-Object { $_.Value[$index] } -Descending | ForEach-Object { $hashSorted[$_.Key] = $_.Value }
+			$Hashtable.GetEnumerator() | Sort-Object { $_.Value[$Value_index] } -Descending | ForEach-Object { $hashSorted[$_.Key] = $_.Value }
 		}
 		else {
 			$hashSorted = [ordered] @{}
-			$hashtable.GetEnumerator() | Sort-Object { $_.Value[$index] } | ForEach-Object { $hashSorted[$_.Key] = $_.Value }
+			$Hashtable.GetEnumerator() | Sort-Object { $_.Value[$Value_index] } | ForEach-Object { $hashSorted[$_.Key] = $_.Value }
 		}
 	}else {
 		if ($Descending) {
 			$hashSorted = [ordered] @{}
-			$hashtable.GetEnumerator() | Sort-Object { $_.Value } -Descending | ForEach-Object { $hashSorted[$_.Key] = $_.Value }
+			$Hashtable.GetEnumerator() | Sort-Object { $_.Value } -Descending | ForEach-Object { $hashSorted[$_.Key] = $_.Value }
 		}
 		else {
 			$hashSorted = [ordered] @{}
-			$hashtable.GetEnumerator() | Sort-Object { $_.Value } | ForEach-Object { $hashSorted[$_.Key] = $_.Value }
+			$Hashtable.GetEnumerator() | Sort-Object { $_.Value } | ForEach-Object { $hashSorted[$_.Key] = $_.Value }
 		}
 	}
 	$hashSorted
