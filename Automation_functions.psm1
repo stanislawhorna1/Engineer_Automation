@@ -153,7 +153,8 @@ function Invoke-HashTableSort {
 			$hashSorted = [ordered] @{}
 			$Hashtable.GetEnumerator() | Sort-Object { $_.Value[$Value_index] } | ForEach-Object { $hashSorted[$_.Key] = $_.Value }
 		}
-	}else {
+	}
+	else {
 		if ($Descending) {
 			$hashSorted = [ordered] @{}
 			$Hashtable.GetEnumerator() | Sort-Object { $_.Value } -Descending | ForEach-Object { $hashSorted[$_.Key] = $_.Value }
@@ -233,7 +234,43 @@ function Invoke-ExcelFileUpdate {
 	$excel.Quit()
 };
 
-
+function Export-ExcelToCsv {
+	param (
+		[Parameter(Mandatory = $true)]
+		[string] $SourceFile,
+		[Parameter(Mandatory = $false)]
+		[string]$Sheet_name,
+		[Parameter(Mandatory = $false)]
+		[switch]$Refresh		
+	)
+	# Open Excel Application
+	$excel = New-Object -ComObject Excel.Application
+	$excel.Visible = $false
+	$excel.DisplayAlerts = $false
+	Start-Sleep -Seconds 2
+	$work = $excel.Workbooks.Open($SourceFile)
+	Start-Sleep -Seconds 2
+	if ($Refresh) {
+		$connections = $work.connections
+		# Refresh all tables related to the source file
+		$work.RefreshAll()
+		# Wait until all tables will be refreshed
+		Start-Sleep -Seconds 2
+		while ($connections | ForEach-Object { if ($_.OLEDBConnection.Refreshing) { $true } }) {
+			Start-Sleep -Milliseconds 500
+		}
+		Start-Sleep -seconds 2
+	}
+	[String]$temp_name = (65..90) | Get-Random -Count 5 | ForEach-Object {[char]$_}
+	$temp_name = $temp_name.Replace(" ","")
+	$temp_name = "C:\temp\" + $temp_name + ".csv"
+	$work.Sheets.Item($Sheet_name).SaveAs($temp_name, 6)
+	$work.Close()
+	$excel.Quit()
+	$csv = Import-Csv -Path $temp_name
+	Remove-Item -Path $temp_name -Force
+	$csv
+}
 
 
 
@@ -290,48 +327,6 @@ foreach ($col in $column_name) {
 		Add-content $calc_f_name $out
 	}
 }
-
-
-
-
-####################################################################
-##  RETRIEVE OLD DATA FROM EXCEL FILE
-####################################################################
-# Open Excel Application
-$excel = New-Object -ComObject Excel.Application
-$excel.Visible = $false
-$work = $excel.Workbooks.Open($Excel_file)
-$connections = $work.connections
-# Refresh all tables related to the source file
-$work.RefreshAll()
-# Wait until all tables will be refreshed
-while ($connections | ForEach-Object { if ($_.OLEDBConnection.Refreshing) { $true } }) {
-	Start-Sleep -Milliseconds 500
-}
-Start-Sleep -seconds 10
-$excel.DisplayAlerts = $false
-if ((test-path $Output_folder\merge) -eq $true) {
-	Remove-item -path $Output_folder\merge -Confirm:$false -Recurse -Force
-}
-new-item -Type Directory $Output_folder\merge
-
-if ((test-path "C:\temp\MS_Teams_update_report\merge\new.csv") -eq $true) {
-	Remove-item -path "C:\temp\MS_Teams_update_report\merge\new.csv"
-}
-$work.Sheets.Item("MS Teams Reinstall").SaveAs("C:\temp\MS_Teams_update_report\merge\new.csv", 6)
-$work.Close()
-$Output_reports = $location + "\Output\"
-$Latest_excel = (Get-ChildItem -Path $Output_reports | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
-$work = $excel.Workbooks.Open($Latest_excel)
-if ((test-path "C:\temp\MS_Teams_update_report\merge\old.csv") -eq $true) {
-	Remove-item -path "C:\temp\MS_Teams_update_report\merge\old.csv"
-}
-$work.Sheets.Item("MS Teams campaign").SaveAs("C:\temp\MS_Teams_update_report\merge\old.csv", 6)
-$work.Close()
-
-####################################################################
-##  RETRIEVE OLD DATA FROM EXCEL FILE
-####################################################################
 
 ####################################################################
 ##  Merge CSV files
