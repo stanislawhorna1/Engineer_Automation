@@ -120,14 +120,14 @@ Function Get-NxqlExport {
 		if ($counter -eq 0) {
 			$out = (Invoke-Nxql -ServerName $engine.address `
 					-PortNumber $webapiPort `
-					-credentials $credentials, `
+					-credentials $credentials `
 					-Query $Query)
 			$out.Split("`n")[0..($out.Split("`n").count - 2)]
 		}
 		else {
 			$out = (Invoke-Nxql -ServerName $engine.address `
 					-PortNumber $webapiPort `
-					-credentials $credentials, `
+					-credentials $credentials `
 					-Query $Query)
 			$out.Split("`n")[1..($out.Split("`n").count - 2)]
 		}
