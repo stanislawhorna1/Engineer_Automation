@@ -382,16 +382,14 @@ function Remove-duplicates {
 	$SourceTable
 };
 
-function Write-HashTableToFile {
+function Export-HashTableToFile {
 	param (
 		[Parameter(Mandatory = $true)]
 		[System.Collections.Hashtable]$Hashtable,
 		[Parameter(Mandatory = $true)]
 		$Headers,
 		[Parameter(Mandatory = $true)]
-		[String]$Path,
-		[Parameter(Mandatory = $false)]
-		[switch]$KeepOrder
+		[String]$Path
 	)
 
 	$out = "`"" + $Headers[0] + "`","
@@ -400,28 +398,32 @@ function Write-HashTableToFile {
 	}
 	$out = $out + "`"" + $Headers[($Headers.Count) - 1] + "`""
 	Set-Content -Path $Path -Value $out
-	if ($KeepOrder) {
-		$KeysOrder = @()
-		$Hashtable.GetEnumerator() | ForEach-Object { $KeysOrder = $KeysOrder + $_.Key }
-		for ($i = 0; $i -lt $KeysOrder.Count; $i++) {
-			$item = $KeysOrder[$i]
-			$out = "`"" + $item + "`","
-			for ($i = 0; $i -lt (($Hashtable.$item.Count) - 1); $i++) {
-				$out = $out + "`"" + $Hashtable.$item[$i] + "`","
-			}
-			$out = $out + "`"" + $Hashtable.$item[($Hashtable.$item.Count) - 1] + "`""
-			Add-content $Path $out
+	foreach ($item in $Hashtable.Keys) {
+		$out = "`"" + $item + "`","
+		for ($i = 0; $i -lt (($Hashtable.$item.Count) - 1); $i++) {
+			$out = $out + "`"" + $Hashtable.$item[$i] + "`","
 		}
-	
+		$out = $out + "`"" + $Hashtable.$item[($Hashtable.$item.Count) - 1] + "`""
+		Add-content $Path $out
 	}
-	else {
-		foreach ($item in $Hashtable.Keys) {
-			$out = "`"" + $item + "`","
-			for ($i = 0; $i -lt (($Hashtable.$item.Count) - 1); $i++) {
-				$out = $out + "`"" + $Hashtable.$item[$i] + "`","
-			}
-			$out = $out + "`"" + $Hashtable.$item[($Hashtable.$item.Count) - 1] + "`""
-			Add-content $Path $out
-		}
+}
+
+function New-RandomHashTable {
+	param(
+		[Parameter(Mandatory = $false)]
+		[int]$NumberOfEntries	
+	)
+	if (-not $NumberOfEntries) {
+		$NumberOfEntries = 100
 	}
+	$hash = @{}
+	for ($i = 0; $i -lt $NumberOfEntries; $i++) {
+		[String]$RanStrName = (48..57) + (65..90) | Get-Random -Count 5 | ForEach-Object { [char]$_ }
+		$RanStrName = $RanStrName.Replace(" ", "")
+		$RanStrName = "PC-" + $RanStrName
+		$RanNumVal1 = Get-Random -Maximum 10000 -Minimum 1
+		$RanNumVal2 = Get-Random -Maximum 10000 -Minimum 1
+		$hash.Add($RanStrName, @($RanNumVal1, $RanNumVal2))
+	}
+	$hash	
 }
