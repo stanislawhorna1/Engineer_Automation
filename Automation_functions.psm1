@@ -144,7 +144,7 @@ function Invoke-HashTableSort {
 		[Parameter(Mandatory = $false)]
 		[switch]$Descending
 	)
-	if ($index) {
+	if ($Value_index) {
 		if ($Descending) {
 			$hashSorted = [ordered] @{}
 			$Hashtable.GetEnumerator() | Sort-Object { $_.Value[$Value_index] } -Descending | ForEach-Object { $hashSorted[$_.Key] = $_.Value }
@@ -275,7 +275,7 @@ function Export-ExcelToCsv {
 function Get-AverageAppStartupTime {
 	param (
 		[Parameter(Mandatory = $true)]
-		[System.Management.Automation.PSCustomObject]$SourceTable,
+		$SourceTable,
 		[Parameter(Mandatory = $true)]
 		[String]$ColumnName
 	)
@@ -348,8 +348,7 @@ function Remove-duplicates {
 	Set-Content -Path $calc_f_name -Value "`"$app_type`",`"Average_start_time[s]`",`"Number_of_devices`""
 	# Calculate average value and write to file
 	foreach ($app in $hash_all.Keys) {
-		$hash_all.$app[0] = ($hash_all.$app[0] / $hash_all.$app[1]) / 1000
-		$avg = [math]::Round($hash_all.$app[0], 3)
+		$avg = $hash_all.$app[0]
 		$num_dev = $hash_all.$app[1]
 		$out = "`"" + $app + "`",`"" + $avg + "`",`"" + $num_dev + "`""
 		Add-content $calc_f_name $out
