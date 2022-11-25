@@ -382,7 +382,32 @@ function Remove-duplicates {
 	$SourceTable
 };
 
-
+function Write-HashTableToFile {
+    param (
+		[Parameter(Mandatory = $true)]
+		[System.Collections.Hashtable]$Hashtable,
+        [Parameter(Mandatory = $true)]
+        $Headers,
+        [Parameter(Mandatory = $true)]
+        [String]$Path
+    )
+    
+    $out = "`"" + $Headers[0] + "`","
+    for ($i = 1; $i -lt $Headers.Count-1; $i++) {
+        $out = $out + "`"" + $Headers[$i] + "`"," 
+    }
+    $out = $out + "`"" + $Headers[($Headers.Count) - 1] + "`""
+    Set-Content -Path $Path -Value $out
+    foreach($item in $Hashtable.Keys){
+        $item
+        $out = "`"" + $item + "`","
+        for ($i = 0; $i -lt (($Hashtable.$item.Count)-1); $i++) {
+            $out = $out + "`"" + $Hashtable.$item[$i] + "`","
+        }
+        $out = $out + "`"" + $Hashtable.$item[($Hashtable.$item.Count) - 1] + "`""
+        Add-content $Path $out
+    }
+}
 
 # Create file name based on column
 $app_type = $col.Split("/")[1]
