@@ -408,16 +408,3 @@ function Write-HashTableToFile {
         Add-content $Path $out
     }
 }
-
-# Create file name based on column
-$app_type = $col.Split("/")[1]
-$calc_f_name = $calc_folder + $app_type + ".csv"
-# Write colums headers to file
-Set-Content -Path $calc_f_name -Value "`"$app_type`",`"Average_start_time[s]`",`"Number_of_devices`""
-# Calculate average value and write to file
-foreach ($app in $hash_all.Keys) {
-	$avg = $hash_all.$app[0]
-	$num_dev = $hash_all.$app[1]
-	$out = "`"" + $app + "`",`"" + $avg + "`",`"" + $num_dev + "`""
-	Add-content $calc_f_name $out
-}
