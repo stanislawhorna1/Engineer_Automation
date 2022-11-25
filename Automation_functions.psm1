@@ -383,28 +383,45 @@ function Remove-duplicates {
 };
 
 function Write-HashTableToFile {
-    param (
+	param (
 		[Parameter(Mandatory = $true)]
 		[System.Collections.Hashtable]$Hashtable,
-        [Parameter(Mandatory = $true)]
-        $Headers,
-        [Parameter(Mandatory = $true)]
-        [String]$Path
-    )
-    
-    $out = "`"" + $Headers[0] + "`","
-    for ($i = 1; $i -lt $Headers.Count-1; $i++) {
-        $out = $out + "`"" + $Headers[$i] + "`"," 
-    }
-    $out = $out + "`"" + $Headers[($Headers.Count) - 1] + "`""
-    Set-Content -Path $Path -Value $out
-    foreach($item in $Hashtable.Keys){
-        $item
-        $out = "`"" + $item + "`","
-        for ($i = 0; $i -lt (($Hashtable.$item.Count)-1); $i++) {
-            $out = $out + "`"" + $Hashtable.$item[$i] + "`","
-        }
-        $out = $out + "`"" + $Hashtable.$item[($Hashtable.$item.Count) - 1] + "`""
-        Add-content $Path $out
-    }
+		[Parameter(Mandatory = $true)]
+		$Headers,
+		[Parameter(Mandatory = $true)]
+		[String]$Path,
+		[Parameter(Mandatory = $false)]
+		[switch]$KeepOrder
+	)
+
+	$out = "`"" + $Headers[0] + "`","
+	for ($i = 1; $i -lt $Headers.Count - 1; $i++) {
+		$out = $out + "`"" + $Headers[$i] + "`"," 
+	}
+	$out = $out + "`"" + $Headers[($Headers.Count) - 1] + "`""
+	Set-Content -Path $Path -Value $out
+	if ($KeepOrder) {
+		$KeysOrder = @()
+		$Hashtable.GetEnumerator() | ForEach-Object { $KeysOrder = $KeysOrder + $_.Key }
+		for ($i = 0; $i -lt $KeysOrder.Count; $i++) {
+			$item = $KeysOrder[$i]
+			$out = "`"" + $item + "`","
+			for ($i = 0; $i -lt (($Hashtable.$item.Count) - 1); $i++) {
+				$out = $out + "`"" + $Hashtable.$item[$i] + "`","
+			}
+			$out = $out + "`"" + $Hashtable.$item[($Hashtable.$item.Count) - 1] + "`""
+			Add-content $Path $out
+		}
+	
+	}
+	else {
+		foreach ($item in $Hashtable.Keys) {
+			$out = "`"" + $item + "`","
+			for ($i = 0; $i -lt (($Hashtable.$item.Count) - 1); $i++) {
+				$out = $out + "`"" + $Hashtable.$item[$i] + "`","
+			}
+			$out = $out + "`"" + $Hashtable.$item[($Hashtable.$item.Count) - 1] + "`""
+			Add-content $Path $out
+		}
+	}
 }
