@@ -102,7 +102,7 @@ Function Invoke-Nxql {
 	catch {
 		Write-Host $Error[0].Exception.Message
 	}
-}; Set-Alias inxql Invoke-Nxql
+};
 
 Function Get-NxqlExport {
 	param (
@@ -261,8 +261,8 @@ function Export-ExcelToCsv {
 		}
 		Start-Sleep -seconds 2
 	}
-	[String]$temp_name = (65..90) | Get-Random -Count 5 | ForEach-Object {[char]$_}
-	$temp_name = $temp_name.Replace(" ","")
+	[String]$temp_name = (65..90) | Get-Random -Count 5 | ForEach-Object { [char]$_ }
+	$temp_name = $temp_name.Replace(" ", "")
 	$temp_name = "C:\temp\" + $temp_name + ".csv"
 	$work.Sheets.Item($Sheet_name).SaveAs($temp_name, 6)
 	$work.Close()
@@ -270,7 +270,7 @@ function Export-ExcelToCsv {
 	$csv = Import-Csv -Path $temp_name
 	Remove-Item -Path $temp_name -Force
 	$csv
-}
+};
 
 function Get-AverageAppStartupTime {
 	param (
@@ -308,7 +308,48 @@ function Get-AverageAppStartupTime {
 		$hash_all.$app[0] = [math]::Round((($hash_all.$app[0] / $hash_all.$app[1]) / 1000), 3)
 	}
 	$hash_all
-}
+};
+
+function Get-AverageGpoTime {
+	param (
+		[Parameter(Mandatory = $true)]
+		$SourceTable,
+		[Parameter(Mandatory = $true)]
+		[String]$ColumnName
+	)
+	$hash_all = @{}
+	for ($j = 0; $j -lt $csv.Count; $j++) {
+		if ((($SourceTable[$j].$ColumnName)[0] -ne "-") -and (($SourceTable[$j].$ColumnName)[0].Length -ne 0)) {
+			# Extract line for all high impact application on device and remove ", " for applications where it is used in name
+			$line = (($SourceTable[$j].$ColumnName) -replace ", ", ",").Split(",")
+			$listed_category = @()
+			for ($i = 0; $i -lt $line.Count; $i++) {
+				# Get app name and extract stats as array (miliseconds, MB)
+				$CategoryName = $line[$i].Substring(0, $line[$i].LastIndexOf("(") - 1)
+				$CategoryStats = $line[$i].Substring($CategoryName.Length + 2).Split(" ")[0]
+				# If app was listed multiple times on one device include only the first instance
+				if ($CategoryName -notin $listed_category) {
+					# If application exist in hashtable, increment values, else add as new entry
+					if ($CategoryName -in $hash_all.Keys) {
+						$hash_all.$CategoryName[0] += [int]$CategoryStats
+						$hash_all.$CategoryName[1]++
+					}
+					else {
+						$hash_all.Add($CategoryName, @([int]$CategoryStats, 1))
+					}
+					$listed_category += $CategoryName
+				}
+				else {
+					$hash_all.$CategoryName[0] += [int]$CategoryStats
+				}
+			}
+		}
+	}
+	foreach ($category in $hash_all.Keys) {
+		$hash_all.$category[0] = [math]::Round((($hash_all.$category[0] / $hash_all.$category[1]) / 1000), 3)
+	}
+	$hash_all
+};
 
 function Remove-duplicates {
 	param (
@@ -321,35 +362,37 @@ function Remove-duplicates {
 		[Parameter(Mandatory = $false)]
 		[switch]$Descending
 	)
-	if($ColumnNameSort){
+	if ($ColumnNameSort) {
 		if (Descending) {
 			$SourceTable = `
 			($SourceTable | Group-Object $ColumnNameGroup | `
-			ForEach-Object { $_.Group |Sort-Object $ColumnNameSort -Descending | `
-			Select-Object -First 1 })
-		}else{
+					ForEach-Object { $_.Group | Sort-Object $ColumnNameSort -Descending | `
+						Select-Object -First 1 })
+		}
+		else {
 			$SourceTable = `
 			($SourceTable | Group-Object $ColumnNameGroup | `
-			ForEach-Object { $_.Group |Sort-Object $ColumnNameSort | `
-			Select-Object -First 1 })
+					ForEach-Object { $_.Group | Sort-Object $ColumnNameSort | `
+						Select-Object -First 1 })
 		}
-	}else{
+	}
+	else {
 		$SourceTable = ($SourceTable | Group-Object $ColumnNameGroup | ForEach-Object { $_.Group | Select-Object -First 1 })
 	}
 	$SourceTable
+};
+
+
+
+# Create file name based on column
+$app_type = $col.Split("/")[1]
+$calc_f_name = $calc_folder + $app_type + ".csv"
+# Write colums headers to file
+Set-Content -Path $calc_f_name -Value "`"$app_type`",`"Average_start_time[s]`",`"Number_of_devices`""
+# Calculate average value and write to file
+foreach ($app in $hash_all.Keys) {
+	$avg = $hash_all.$app[0]
+	$num_dev = $hash_all.$app[1]
+	$out = "`"" + $app + "`",`"" + $avg + "`",`"" + $num_dev + "`""
+	Add-content $calc_f_name $out
 }
-
-
-
-	# Create file name based on column
-	$app_type = $col.Split("/")[1]
-	$calc_f_name = $calc_folder + $app_type + ".csv"
-	# Write colums headers to file
-	Set-Content -Path $calc_f_name -Value "`"$app_type`",`"Average_start_time[s]`",`"Number_of_devices`""
-	# Calculate average value and write to file
-	foreach ($app in $hash_all.Keys) {
-		$avg = $hash_all.$app[0]
-		$num_dev = $hash_all.$app[1]
-		$out = "`"" + $app + "`",`"" + $avg + "`",`"" + $num_dev + "`""
-		Add-content $calc_f_name $out
-	}
