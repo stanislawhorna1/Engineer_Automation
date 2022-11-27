@@ -2,6 +2,32 @@ Add-Type -AssemblyName System.Web
 Add-Type -AssemblyName System.Windows.Forms
 
 function Get-EngineList {
+	<#
+.SYNOPSIS
+Returns list of Engines connected to Nexthink Portal
+
+.DESCRIPTION
+Connets to Nexthink Portal and retrieves list of all engines,
+next select only connected ones.
+
+.PARAMETER portal
+The Nexthink Portal DNS Name to retrieve connected engines
+
+.PARAMETER credentials
+Nexthink account authorised to extract list of engines
+
+.EXAMPLE
+Get-EngineList -portal "test.eu.nexthink.cloud" -credentials <Account_UserName>
+
+.INPUTS
+String
+
+.OUTPUTS
+Hastable
+
+.NOTES
+    Author:  Stanislaw Horna
+#>
 	param (
 		[Parameter(Mandatory = $true)]
 		[string] $portal,
@@ -105,6 +131,42 @@ Function Invoke-Nxql {
 };
 
 Function Get-NxqlExport {
+	<#
+.SYNOPSIS
+Returns output from multiple Nexthink Engines
+
+.DESCRIPTION
+Returns formatted output from multiple Nexthink Engines, based on provided Engine list (Hashtable).
+Output of function can be saved to file or variable
+Uses Invoke-Nxql function to retrieve data from each engine one by one.
+
+.PARAMETER Query
+String that contains NXQL query. 
+
+.PARAMETER credential
+Nexthink account authorised to extract data from engines
+
+.PARAMETER webapiPort
+WebAPI port: 
+	for SaaS - "443"
+	for on-premise "1671" 
+
+
+.PARAMETER EngineList
+List of connected engines in Hashtable, output of Get-EngineList can be used.
+
+.EXAMPLE
+Get-NxqlExport -Query "NXQL query" `
+			   -credentials <variable_created_by "Get-Credential"> `
+			   -webapiPort "443" `
+			   -EngineList <output from Get-EngineList>
+
+.OUTPUTS
+String
+
+.NOTES
+    Author:  Stanislaw Horna
+#>
 	param (
 		[Parameter(Mandatory = $true)]
 		[String] $Query,
@@ -136,6 +198,31 @@ Function Get-NxqlExport {
 };
 
 function Invoke-HashTableSort {
+	<#
+.SYNOPSIS
+Returns sorted hashtable.
+
+.DESCRIPTION
+Sorts hash table that contains array in value and returns new one.
+
+.PARAMETER Hashtable
+Hastable to sort
+
+.PARAMETER Value_index
+Index of value located in array by which entries will be sorted
+
+.PARAMETER Descending
+If included values will be sorted descending otherwise ascending
+
+.EXAMPLE
+
+
+.OUTPUTS
+Hashtable
+
+.NOTES
+    Author:  Stanislaw Horna
+#>
 	param (
 		[Parameter(Mandatory = $true)]
 		[System.Collections.Hashtable]$Hashtable,
@@ -168,6 +255,34 @@ function Invoke-HashTableSort {
 }
 
 Function Invoke-Popup {
+	<#
+.SYNOPSIS
+Display windows 10 pop-up message
+
+.DESCRIPTION
+Display Windows 10 pop-up message based on the title and description provided
+Powershell icon will be visible in the pop-up
+
+.PARAMETER title
+Message title 1 line
+
+.PARAMETER description
+Message description multiple lines
+
+.EXAMPLE
+Invoke-Popup -title "Report "ready" `
+			 -description "Automatically created report is ready"
+
+
+.INPUTS
+String
+
+.OUTPUTS
+None
+
+.NOTES
+    Author:  Stanislaw Horna
+#>
 	param (
 		[Parameter(Mandatory = $true)]
 		[string] $title,
@@ -184,6 +299,34 @@ Function Invoke-Popup {
 };
 
 function Invoke-ExcelFileUpdate {
+	<#
+.SYNOPSIS
+Updates Excel report template
+
+.DESCRIPTION
+Function copies report template to destination location,
+updates all table queries and pivot tables which exists in a given file,
+breaks all external connections
+
+.PARAMETER SourceFile
+Template file location full path
+
+.PARAMETER DestinationFile
+Destination file location (with name) 
+
+.EXAMPLE
+Invoke-ExceFileUpdate -SourceFile C:\temp\template.xlsx `
+					  -DestinationFile C:\Users\User\Documents\report.xlsx
+
+.INPUTS
+File paths as a strings
+
+.OUTPUTS
+None
+
+.NOTES
+    Author:  Stanislaw Horna
+#>
 	param (
 		[Parameter(Mandatory = $true)]
 		[string] $SourceFile,
@@ -235,6 +378,35 @@ function Invoke-ExcelFileUpdate {
 };
 
 function Export-ExcelToCsv {
+	<#
+.SYNOPSIS
+Saves Excel sheet to csv format
+
+.DESCRIPTION
+Exports selected Excel sheet to csv format. As working directory C:\temp\ is used
+Function generated random string name for temp file, at the end file is removed
+
+.PARAMETER SourceFile
+Full path to Excel source file from which data will be exported
+
+.PARAMETER Sheet_name
+Excel Worksheet name which will be exported
+
+.PARAMETER Refresh
+Switch if existing table queries should be refreshed before exporting data
+
+.EXAMPLE
+$csv = Export-ExcelToCsv -SourceFile C:\temp\report.xslx -Sheet_name "Data"
+
+.INPUTS
+String
+
+.OUTPUTS
+PSCustomObject
+
+.NOTES
+    Author:  Stanislaw Horna
+#>
 	param (
 		[Parameter(Mandatory = $true)]
 		[string] $SourceFile,
@@ -273,6 +445,34 @@ function Export-ExcelToCsv {
 };
 
 function Get-AverageAppStartupTime {
+	<#
+.SYNOPSIS
+Calculates Average startup time based on Nexthink RA results
+
+.DESCRIPTION
+Calculates Average Startup Time form Nexthink RA "Get Startup impact" from given column name
+
+.PARAMETER SourceTable
+Imported csv file with RA results
+
+.PARAMETER ColumnName
+Column Name where startup impact data is located
+
+.EXAMPLE
+Get-AverageAppStartupTime -SourceTable $csv_table -ColumnName "HignImpactApplications"
+
+
+.INPUTS
+PSCustomObject
+String
+
+.OUTPUTS
+Hashtable
+
+.NOTES
+    Author:  Stanislaw Horna,
+			 Pawel Bielinski
+#>
 	param (
 		[Parameter(Mandatory = $true)]
 		$SourceTable,
@@ -311,6 +511,33 @@ function Get-AverageAppStartupTime {
 };
 
 function Get-AverageGpoTime {
+	<#
+.SYNOPSIS
+Calculates Average GPO processing time based on Nexthink RA results
+
+.DESCRIPTION
+Calculates GPO procesing time for each gpo category based on Nexthink RA
+
+.PARAMETER SourceTable
+Imported csv file with RA results
+
+.PARAMETER ColumnName
+Column Name where GPO startup impact data is located
+
+.EXAMPLE
+Get-AverageGpoTime -SourceTable $csv_table -ColumnName "HignImpactApplications"
+
+.INPUTS
+PSCustomObject
+String
+
+.OUTPUTS
+Hashtable
+
+.NOTES
+    Author:  Stanislaw Horna,
+			 Pawel Bielinski
+#>
 	param (
 		[Parameter(Mandatory = $true)]
 		$SourceTable,
@@ -320,16 +547,16 @@ function Get-AverageGpoTime {
 	$hash_all = @{}
 	for ($j = 0; $j -lt $csv.Count; $j++) {
 		if ((($SourceTable[$j].$ColumnName)[0] -ne "-") -and (($SourceTable[$j].$ColumnName)[0].Length -ne 0)) {
-			# Extract line for all high impact application on device and remove ", " for applications where it is used in name
+			# Extract line for all GPO categories on device
 			$line = (($SourceTable[$j].$ColumnName) -replace ", ", ",").Split(",")
 			$listed_category = @()
 			for ($i = 0; $i -lt $line.Count; $i++) {
-				# Get app name and extract stats as array (miliseconds, MB)
+				# Get category name and extract stats as array (miliseconds)
 				$CategoryName = $line[$i].Substring(0, $line[$i].LastIndexOf("(") - 1)
 				$CategoryStats = $line[$i].Substring($CategoryName.Length + 2).Split(" ")[0]
-				# If app was listed multiple times on one device include only the first instance
+				# If category was listed multiple times on one device sum time but do not increment number of devices
 				if ($CategoryName -notin $listed_category) {
-					# If application exist in hashtable, increment values, else add as new entry
+					# If category exist in hashtable, increment values, else add as new entry
 					if ($CategoryName -in $hash_all.Keys) {
 						$hash_all.$CategoryName[0] += [int]$CategoryStats
 						$hash_all.$CategoryName[1]++
@@ -352,6 +579,40 @@ function Get-AverageGpoTime {
 };
 
 function Remove-duplicates {
+	<#
+.SYNOPSIS
+Remove duplicates - work the same as Excel function
+
+.DESCRIPTION
+Group entries by given column, sort by given column and select first result from sorting
+
+.PARAMETER SourceTable
+Csv imported table
+
+.PARAMETER ColumnNameGroup
+Column name where only unique values should remain
+
+.PARAMETER ColumnNameSort
+Column name by which values should be sorted befor removing duplicated vaules
+Can be empty
+
+.PARAMETER DateTime
+Select if ColumnNameSort should be sorted as date time
+
+.EXAMPLE
+
+
+
+.INPUTS
+
+
+.OUTPUTS
+PSCustomObject
+
+.NOTES
+    Author:  Stanislaw Horna
+			 Pawel Bielinski
+#>
 	param (
 		[Parameter(Mandatory = $true)]
 		[System.Management.Automation.PSCustomObject]$SourceTable,
@@ -383,6 +644,38 @@ function Remove-duplicates {
 };
 
 function Export-HashTableToCsv {
+	<#
+.SYNOPSIS
+Converts Hashtable to csv
+
+.DESCRIPTION
+Converts hashtable to csv format, works with hash where value is 1 dimmension array,
+result can be saved to file or variable
+
+.PARAMETER Hashtable
+Hashtable which will be converted
+
+.PARAMETER Headers
+Array of headers in an specified order
+
+.PARAMETER Path
+Specify only if result should be save to file
+
+.EXAMPLE
+$csv = Export-HashTableToCsv -Hashtable $hash `
+	-Headers @("Device name", "Average process count", "CPU time") | ConvertFrom-Csv
+
+
+.INPUTS
+Hashtable
+Array
+
+.OUTPUTS
+PSCustomObject
+
+.NOTES
+    Author:  Stanislaw Horna
+#>
 	param (
 		[Parameter(Mandatory = $true)]
 		[System.Collections.Hashtable]$Hashtable,
@@ -425,6 +718,13 @@ function Export-HashTableToCsv {
 }
 
 function New-RandomHashTable {
+	<#
+.SYNOPSIS
+Generates Hash table with array in value
+
+.NOTES
+    Author:  Stanislaw Horna
+#>
 	param(
 		[Parameter(Mandatory = $false)]
 		[int]$NumberOfEntries	
