@@ -382,13 +382,13 @@ function Remove-duplicates {
 	$SourceTable
 };
 
-function Export-HashTableToFile {
+function Export-HashTableToCsv {
 	param (
 		[Parameter(Mandatory = $true)]
 		[System.Collections.Hashtable]$Hashtable,
 		[Parameter(Mandatory = $true)]
 		$Headers,
-		[Parameter(Mandatory = $true)]
+		[Parameter(Mandatory = $false)]
 		[String]$Path
 	)
 
@@ -397,15 +397,31 @@ function Export-HashTableToFile {
 		$out = $out + "`"" + $Headers[$i] + "`"," 
 	}
 	$out = $out + "`"" + $Headers[($Headers.Count) - 1] + "`""
-	Set-Content -Path $Path -Value $out
-	foreach ($item in $Hashtable.Keys) {
-		$out = "`"" + $item + "`","
-		for ($i = 0; $i -lt (($Hashtable.$item.Count) - 1); $i++) {
-			$out = $out + "`"" + $Hashtable.$item[$i] + "`","
+	if ($Path) {
+		Set-Content -Path $Path -Value $out
+		foreach ($item in $Hashtable.Keys) {
+			$out = "`"" + $item + "`","
+			for ($i = 0; $i -lt (($Hashtable.$item.Count) - 1); $i++) {
+				$out = $out + "`"" + $Hashtable.$item[$i] + "`","
+			}
+			$out = $out + "`"" + $Hashtable.$item[($Hashtable.$item.Count) - 1] + "`""
+			Add-content $Path $out
+			# $out
 		}
-		$out = $out + "`"" + $Hashtable.$item[($Hashtable.$item.Count) - 1] + "`""
-		Add-content $Path $out
 	}
+	else {
+		$out
+		foreach ($item in $Hashtable.Keys) {
+			$out = "`"" + $item + "`","
+			for ($i = 0; $i -lt (($Hashtable.$item.Count) - 1); $i++) {
+				$out = $out + "`"" + $Hashtable.$item[$i] + "`","
+			}
+			$out = $out + "`"" + $Hashtable.$item[($Hashtable.$item.Count) - 1] + "`""
+			# Add-content $Path $out
+			$out
+		}
+	}
+
 }
 
 function New-RandomHashTable {
@@ -427,3 +443,4 @@ function New-RandomHashTable {
 	}
 	$hash	
 }
+
