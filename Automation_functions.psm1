@@ -45,7 +45,6 @@ Hastable
 	# Listing Connected Engines only
 	$engineList | Where-Object { $_.status -eq "CONNECTED" }
 };
-
 Function Invoke-Nxql {
 	<#
 	.SYNOPSIS
@@ -129,7 +128,6 @@ Function Invoke-Nxql {
 		Write-Host $Error[0].Exception.Message
 	}
 };
-
 Function Get-NxqlExport {
 	<#
 .SYNOPSIS
@@ -196,7 +194,6 @@ String
 		$counter = 1
 	}
 };
-
 function Invoke-HashTableSort {
 	<#
 .SYNOPSIS
@@ -253,7 +250,6 @@ Hashtable
 	}
 	$hashSorted
 }
-
 Function Invoke-Popup {
 	<#
 .SYNOPSIS
@@ -297,7 +293,6 @@ None
 	$endmsg.Visible = $true
 	$endmsg.ShowBalloonTip(10)
 };
-
 function Invoke-ExcelFileUpdate {
 	<#
 .SYNOPSIS
@@ -376,7 +371,6 @@ None
 	$work.Close()
 	$excel.Quit()
 };
-
 function Export-ExcelToCsv {
 	<#
 .SYNOPSIS
@@ -443,7 +437,6 @@ PSCustomObject
 	Remove-Item -Path $temp_name -Force
 	$csv
 };
-
 function Get-AverageAppStartupTime {
 	<#
 .SYNOPSIS
@@ -509,7 +502,6 @@ Hashtable
 	}
 	$hash_all
 };
-
 function Get-AverageGpoTime {
 	<#
 .SYNOPSIS
@@ -525,7 +517,7 @@ Imported csv file with RA results
 Column Name where GPO startup impact data is located
 
 .EXAMPLE
-Get-AverageGpoTime -SourceTable $csv_table -ColumnName "HignImpactApplications"
+Get-AverageGpoTime -SourceTable $csv_table -ColumnName "UserGPOtime"
 
 .INPUTS
 PSCustomObject
@@ -545,7 +537,7 @@ Hashtable
 		[String]$ColumnName
 	)
 	$hash_all = @{}
-	for ($j = 0; $j -lt $csv.Count; $j++) {
+	for ($j = 0; $j -lt $SourceTable.Count; $j++) {
 		if ((($SourceTable[$j].$ColumnName)[0] -ne "-") -and (($SourceTable[$j].$ColumnName)[0].Length -ne 0)) {
 			# Extract line for all GPO categories on device
 			$line = (($SourceTable[$j].$ColumnName) -replace ", ", ",").Split(",")
@@ -577,7 +569,6 @@ Hashtable
 	}
 	$hash_all
 };
-
 function Remove-duplicates {
 	<#
 .SYNOPSIS
@@ -642,7 +633,6 @@ PSCustomObject
 	}
 	$SourceTable
 };
-
 function Export-HashTableToCsv {
 	<#
 .SYNOPSIS
@@ -716,7 +706,6 @@ PSCustomObject
 	}
 
 }
-
 function New-RandomHashTable {
 	<#
 .SYNOPSIS
@@ -743,4 +732,60 @@ Generates Hash table with array in value
 	}
 	$hash	
 }
+function New-DataSummary {
+		<#
+.SYNOPSIS
+Creates data summary in Hashtable
 
+.DESCRIPTION
+Creates summary like Excel pivot table, based on table provided and selected columns
+
+.PARAMETER SourceTable
+Source data table
+
+.PARAMETER RowsColumn
+Simmilar to Excel PivotTable column, on which rows are created 
+
+.PARAMETER AverageColumn
+Vaule which is needed as a average for each unique value from RowsColumn
+
+.INPUTS
+Table
+String
+
+.OUTPUTS
+Hashtable
+
+.NOTES
+    Author:  Stanislaw Horna
+#>
+	param (
+		[Parameter(Mandatory = $true)]
+		$SourceTable,
+		[Parameter(Mandatory = $true)]
+		[String]$RowsColumn,
+		[Parameter(Mandatory = $true)]
+		[String]$AverageColumn
+	)
+	$hash_all = @{}
+	for ($j = 0; $j -lt $SourceTable.Count; $j++) {
+		# Get category name and extract stats as array (miliseconds)
+		$RowName = $SourceTable[$j].$RowsColumn
+	if (($RowName -ne "-") -and ($RowName.length -gt 2)) {
+		
+		$RowStats = $SourceTable[$j].$AverageColumn
+		# If category was listed multiple times on one device sum time but do not increment number of devices
+		if ($RowName -in $hash_all.Keys) {
+			$hash_all.$RowName[0] += [int]$RowStats
+			$hash_all.$RowName[1]++
+		}
+		else {
+			$hash_all.Add($RowName, @([int]$RowStats, 1))
+		}
+	}
+	}
+	foreach ($Item in $hash_all.Keys) {
+		$hash_all.$Item[0] = [math]::Round((($hash_all.$Item[0] / $hash_all.$Item[1])), 3)
+	}
+	$hash_all
+}
