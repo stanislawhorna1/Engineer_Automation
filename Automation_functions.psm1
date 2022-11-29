@@ -726,9 +726,13 @@ Generates Hash table with array in value
 		[String]$RanStrName = (48..57) + (65..90) | Get-Random -Count 5 | ForEach-Object { [char]$_ }
 		$RanStrName = $RanStrName.Replace(" ", "")
 		$RanStrName = "PC-" + $RanStrName
-		$RanNumVal1 = Get-Random -Maximum 10000 -Minimum 1
-		$RanNumVal2 = Get-Random -Maximum 10000 -Minimum 1
-		$hash.Add($RanStrName, @($RanNumVal1, $RanNumVal2))
+		if ($RanStrName -notin $hash.Keys) {
+			$RanNumVal1 = Get-Random -Maximum 10000 -Minimum 1
+			$RanNumVal2 = Get-Random -Maximum 10000 -Minimum 1
+			$hash.Add($RanStrName, @($RanNumVal1, $RanNumVal2))
+		}else {
+			$i--
+		}
 	}
 	$hash	
 }
@@ -788,4 +792,36 @@ Hashtable
 		$hash_all.$Item[0] = [math]::Round((($hash_all.$Item[0] / $hash_all.$Item[1])), 3)
 	}
 	$hash_all
+}
+
+function Convert-FromCsvToHashtable {
+	param (
+		[Parameter(ValueFromPipeline)]
+		$SourceTable,
+		[Parameter(Mandatory = $true)]
+		[String]$ColumnID,
+		[Parameter(Mandatory = $false)]
+		[String]$Path,
+		[Parameter(Mandatory = $false)]
+		[String]$Delimiter
+	)
+	if ($Path) {
+		$SourceTable = Import-Csv -Path $Path -Delimiter $Delimiter
+	}
+	$Hash = $SourceTable | Group-Object -AsHashTable -Property $ColumnID
+	$Hash
+}
+function Convert-FromHashtableToCsv {
+	param (
+		[Parameter(Mandatory = $true)]
+		$SourceHashtable,
+		[Parameter(Mandatory = $false)]
+		[String]$Path
+	)
+	$csv = $SourceHashtable.GetEnumerator() | ForEach-Object {$SourceHashtable[$_.Key].GetEnumerator()}
+	if ($Path) {
+		$csv | Export-Csv -Path $Path -NoTypeInformation
+	}else{
+		$csv
+	}
 }
