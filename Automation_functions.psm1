@@ -617,6 +617,7 @@ PSCustomObject
 		[switch]$DateTime
 	)
 	$Hash = @{}
+	$ErrorActionPreference = 'SilentlyContinue'
 	Switch ($true) {
 		($ColumnNameSort -and $DateTime -and $Descending) {
 			$SourceTable | Sort-Object -property { [System.DateTime]::ParseExact($_.$ColumnNameSort, "yyyy-MM-dd'T'HH:mm:ss", $null)} -Descending `
@@ -660,6 +661,7 @@ PSCustomObject
 		}
 
 	}
+	$ErrorActionPreference = 'Continue'
 	$Hash.Values
 };
 function Export-HashTableToCsv {
@@ -855,6 +857,4 @@ function Convert-FromHashtableToCsv {
 		$csv
 	}
 }
-
-
 
