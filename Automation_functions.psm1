@@ -345,11 +345,11 @@ None
 	$connections = $work.connections
 	# Refresh existing Table Queries
 	$work.RefreshAll()
-	Start-Sleep -Seconds 2
+	Start-Sleep -Seconds 10
 	while ($connections | ForEach-Object { if ($_.OLEDBConnection.Refreshing) { $true } }) {
 		Start-Sleep -Milliseconds 500
 	}
-	Start-Sleep -Seconds 2
+	Start-Sleep -Seconds 10
 	# Get list of available sheets in file
 	$list_sheets = $work.Worksheets | Select-Object name, index
 	# For Each sheet update Pivot table if exist
@@ -606,20 +606,30 @@ PSCustomObject
 #>
 	param (
 		[Parameter(Mandatory = $true)]
-		[System.Management.Automation.PSCustomObject]$SourceTable,
+		$SourceTable,
 		[Parameter(Mandatory = $true)]
 		[String]$ColumnNameGroup,
 		[Parameter(Mandatory = $false)]
 		[String]$ColumnNameSort,
 		[Parameter(Mandatory = $false)]
-		[switch]$Descending
+		[switch]$Descending,
+		[Parameter(Mandatory = $false)]
+		[switch]$DateTime
 	)
 	if ($ColumnNameSort) {
-		if (Descending) {
-			$SourceTable = `
-			($SourceTable | Group-Object $ColumnNameGroup | `
-					ForEach-Object { $_.Group | Sort-Object $ColumnNameSort -Descending | `
-						Select-Object -First 1 })
+		if ($Descending) {
+			if ($DateTime) {
+				$csv = ($csv | Group-Object $ColumnNameGroup | ForEach-Object { 
+					$_.Group | Sort-Object -property {[System.DateTime]::ParseExact($_.$ColumnNameSort, "yyyy-MM-dd'T'HH:mm:ss", $null)} -Descending | Select-Object -First 1 
+				})
+				
+			}
+			else {
+				$SourceTable = `
+				($SourceTable | Group-Object $ColumnNameGroup | `
+						ForEach-Object { $_.Group | Sort-Object $ColumnNameSort -Descending | `
+							Select-Object -First 1 })
+			}
 		}
 		else {
 			$SourceTable = `
@@ -730,14 +740,15 @@ Generates Hash table with array in value
 			$RanNumVal1 = Get-Random -Maximum 10000 -Minimum 1
 			$RanNumVal2 = Get-Random -Maximum 10000 -Minimum 1
 			$hash.Add($RanStrName, @($RanNumVal1, $RanNumVal2))
-		}else {
+		}
+		else {
 			$i--
 		}
 	}
 	$hash	
 }
 function New-DataSummary {
-		<#
+	<#
 .SYNOPSIS
 Creates data summary in Hashtable
 
@@ -775,25 +786,24 @@ Hashtable
 	for ($j = 0; $j -lt $SourceTable.Count; $j++) {
 		# Get category name and extract stats as array (miliseconds)
 		$RowName = $SourceTable[$j].$RowsColumn
-	if (($RowName -ne "-") -and ($RowName.length -gt 2)) {
+		if (($RowName -ne "-") -and ($RowName.length -gt 2)) {
 		
-		$RowStats = $SourceTable[$j].$AverageColumn
-		# If category was listed multiple times on one device sum time but do not increment number of devices
-		if ($RowName -in $hash_all.Keys) {
-			$hash_all.$RowName[0] += [int]$RowStats
-			$hash_all.$RowName[1]++
+			$RowStats = $SourceTable[$j].$AverageColumn
+			# If category was listed multiple times on one device sum time but do not increment number of devices
+			if ($RowName -in $hash_all.Keys) {
+				$hash_all.$RowName[0] += [int]$RowStats
+				$hash_all.$RowName[1]++
+			}
+			else {
+				$hash_all.Add($RowName, @([int]$RowStats, 1))
+			}
 		}
-		else {
-			$hash_all.Add($RowName, @([int]$RowStats, 1))
-		}
-	}
 	}
 	foreach ($Item in $hash_all.Keys) {
 		$hash_all.$Item[0] = [math]::Round((($hash_all.$Item[0] / $hash_all.$Item[1])), 3)
 	}
 	$hash_all
 }
-
 function Convert-FromCsvToHashtable {
 	param (
 		[Parameter(ValueFromPipeline)]
@@ -818,10 +828,11 @@ function Convert-FromHashtableToCsv {
 		[Parameter(Mandatory = $false)]
 		[String]$Path
 	)
-	$csv = $SourceHashtable.GetEnumerator() | ForEach-Object {$SourceHashtable[$_.Key].GetEnumerator()}
+	$csv = $SourceHashtable.GetEnumerator() | ForEach-Object { $SourceHashtable[$_.Key].GetEnumerator() }
 	if ($Path) {
 		$csv | Export-Csv -Path $Path -NoTypeInformation
-	}else{
+	}
+	else {
 		$csv
 	}
 }
