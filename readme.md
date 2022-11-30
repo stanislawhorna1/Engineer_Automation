@@ -4,7 +4,9 @@
 
 
 ## To-Do
-
+Review performance on HashTable structure on big data 
+Potential use case - fast vlookup for example Device properties
+$CSV | Group-Object -AsHashTable -Property $ColumnID
 
 # Function Description
 
