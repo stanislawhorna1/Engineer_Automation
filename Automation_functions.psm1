@@ -569,7 +569,7 @@ Hashtable
 	}
 	$hash_all
 };
-function Remove-duplicates {
+function Remove-Duplicates {
 	<#
 .SYNOPSIS
 Remove duplicates - work the same as Excel function
@@ -616,32 +616,51 @@ PSCustomObject
 		[Parameter(Mandatory = $false)]
 		[switch]$DateTime
 	)
-	if ($ColumnNameSort) {
-		if ($Descending) {
-			if ($DateTime) {
-				$csv = ($csv | Group-Object $ColumnNameGroup | ForEach-Object { 
-					$_.Group | Sort-Object -property {[System.DateTime]::ParseExact($_.$ColumnNameSort, "yyyy-MM-dd'T'HH:mm:ss", $null)} -Descending | Select-Object -First 1 
-				})
-				
-			}
-			else {
-				$SourceTable = `
-				($SourceTable | Group-Object $ColumnNameGroup | `
-						ForEach-Object { $_.Group | Sort-Object $ColumnNameSort -Descending | `
-							Select-Object -First 1 })
-			}
+	$Hash = @{}
+	Switch ($true) {
+		($ColumnNameSort -and $DateTime -and $Descending) {
+			$SourceTable | Sort-Object -property { [System.DateTime]::ParseExact($_.$ColumnNameSort, "yyyy-MM-dd'T'HH:mm:ss", $null)} -Descending `
+			| ForEach-Object {
+    				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
+							$Hash.Add($_.$ColumnNameGroup, $_)
+    					}
+					}
 		}
-		else {
-			$SourceTable = `
-			($SourceTable | Group-Object $ColumnNameGroup | `
-					ForEach-Object { $_.Group | Sort-Object $ColumnNameSort | `
-						Select-Object -First 1 })
+		($ColumnNameSort -and $DateTime){
+			$SourceTable | Sort-Object -property { [System.DateTime]::ParseExact($_.$ColumnNameSort, "yyyy-MM-dd'T'HH:mm:ss", $null)} `
+			| ForEach-Object {
+    				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
+							$Hash.Add($_.$ColumnNameGroup, $_)
+    					}
+					}
 		}
+		($ColumnNameSort -and $Descending){
+			$SourceTable | Sort-Object -property $ColumnNameSort -Descending `
+			| ForEach-Object {
+    				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
+							$Hash.Add($_.$ColumnNameGroup, $_)
+    					}
+					}
+		}
+		($ColumnNameSort){
+			$SourceTable | Sort-Object -property $ColumnNameSort -Descending `
+			| ForEach-Object {
+    				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
+							$Hash.Add($_.$ColumnNameGroup, $_)
+    					}
+					}
+		}
+		Default{
+			$SourceTable  `
+			| ForEach-Object {
+    				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
+							$Hash.Add($_.$ColumnNameGroup, $_)
+    					}
+					}
+		}
+
 	}
-	else {
-		$SourceTable = ($SourceTable | Group-Object $ColumnNameGroup | ForEach-Object { $_.Group | Select-Object -First 1 })
-	}
-	$SourceTable
+	$Hash.Values
 };
 function Export-HashTableToCsv {
 	<#
@@ -836,3 +855,6 @@ function Convert-FromHashtableToCsv {
 		$csv
 	}
 }
+
+
+
