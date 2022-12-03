@@ -620,44 +620,44 @@ PSCustomObject
 	$ErrorActionPreference = 'SilentlyContinue'
 	Switch ($true) {
 		($ColumnNameSort -and $DateTime -and $Descending) {
-			$SourceTable | Sort-Object -property { [System.DateTime]::ParseExact($_.$ColumnNameSort, "yyyy-MM-dd'T'HH:mm:ss", $null)} -Descending `
+			$SourceTable | Sort-Object -property { [System.DateTime]::ParseExact($_.$ColumnNameSort, "yyyy-MM-dd'T'HH:mm:ss", $null) } -Descending `
 			| ForEach-Object {
-    				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
-							$Hash.Add($_.$ColumnNameGroup, $_)
-    					}
-					}
+				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
+					$Hash.Add($_.$ColumnNameGroup, $_)
+				}
+			}
 		}
-		($ColumnNameSort -and $DateTime){
-			$SourceTable | Sort-Object -property { [System.DateTime]::ParseExact($_.$ColumnNameSort, "yyyy-MM-dd'T'HH:mm:ss", $null)} `
+		($ColumnNameSort -and $DateTime) {
+			$SourceTable | Sort-Object -property { [System.DateTime]::ParseExact($_.$ColumnNameSort, "yyyy-MM-dd'T'HH:mm:ss", $null) } `
 			| ForEach-Object {
-    				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
-							$Hash.Add($_.$ColumnNameGroup, $_)
-    					}
-					}
+				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
+					$Hash.Add($_.$ColumnNameGroup, $_)
+				}
+			}
 		}
-		($ColumnNameSort -and $Descending){
+		($ColumnNameSort -and $Descending) {
 			$SourceTable | Sort-Object -property $ColumnNameSort -Descending `
 			| ForEach-Object {
-    				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
-							$Hash.Add($_.$ColumnNameGroup, $_)
-    					}
-					}
+				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
+					$Hash.Add($_.$ColumnNameGroup, $_)
+				}
+			}
 		}
-		($ColumnNameSort){
+		($ColumnNameSort) {
 			$SourceTable | Sort-Object -property $ColumnNameSort -Descending `
 			| ForEach-Object {
-    				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
-							$Hash.Add($_.$ColumnNameGroup, $_)
-    					}
-					}
+				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
+					$Hash.Add($_.$ColumnNameGroup, $_)
+				}
+			}
 		}
-		Default{
+		Default {
 			$SourceTable  `
 			| ForEach-Object {
-    				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
-							$Hash.Add($_.$ColumnNameGroup, $_)
-    					}
-					}
+				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
+					$Hash.Add($_.$ColumnNameGroup, $_)
+				}
+			}
 		}
 
 	}
