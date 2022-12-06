@@ -1,6 +1,6 @@
 # Change log
 
-06.12.2022 - Get-NxqlExport - Handling queries, which returns blank output from some engines, loading bar added
+06.12.2022 - Get-NxqlExport - Handling queries, which returns blank output from some engines
 30.11.2022 - Remove-Duplicates performance improvement
 
 

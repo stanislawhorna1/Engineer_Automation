@@ -341,14 +341,14 @@ None
 	$excel = New-Object -ComObject Excel.Application
 	$excel.Visible = $false
 	$excel.DisplayAlerts = $false
-	Start-Sleep -Seconds 2
+	Start-Sleep -Seconds 5
 	# Open Excel file
 	$work = $excel.Workbooks.Open($DestinationFile)
-	Start-Sleep -Seconds 2
+	Start-Sleep -Seconds 15
 	$connections = $work.connections
 	# Refresh existing Table Queries
 	$work.RefreshAll()
-	Start-Sleep -Seconds 10
+	Start-Sleep -Seconds 30
 	while ($connections | ForEach-Object { if ($_.OLEDBConnection.Refreshing) { $true } }) {
 		Start-Sleep -Milliseconds 500
 	}
@@ -363,6 +363,7 @@ None
 			$pivots.Item($i).RefreshTable() | Out-Null
 		}
 	}
+	Start-Sleep -Seconds 5
 	# Get number of Table Queries
 	$num_of_queries_to_delete = ($work.Queries).Count
 	# Brake All Table Queries
@@ -370,6 +371,7 @@ None
 		$work.Queries.Item(1).Delete()
 	}
 	# Save all done work and close file and Application
+	Start-Sleep -Seconds 15
 	$work.Save()
 	$work.Close()
 	$excel.Quit()
