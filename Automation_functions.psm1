@@ -173,27 +173,25 @@ String
 		[Parameter(Mandatory = $true)]
 		[String]$webapiPort,
 		[Parameter(Mandatory = $true)]
-		$EngineList,
-		[Parameter (Mandatory = $false)]
-		[String]$Title
+		$EngineList
 	)
-	Write-Host "...Exporting data..."
-	$flag = 0
+	$counter = 0
 	foreach ($engine in $EngineList) {
-		$out = (Invoke-Nxql -ServerName $engine.address `
-				-PortNumber $webapiPort `
-				-credentials $credentials `
-				-Query $Query)
-		$out = $out.Split("`n")		
-		if (($flag -eq 0) -and $out.count -gt 2) {
-			$out[0..($out.count - 2)]
-			$flag++
+		if ($counter -eq 0) {
+			$out = (Invoke-Nxql -ServerName $engine.address `
+					-PortNumber $webapiPort `
+					-credentials $credentials `
+					-Query $Query)
+			$out.Split("`n")[0..($out.Split("`n").count - 2)]
 		}
-		if (($flag -ne 0) -and $out.count -gt 2) {
-			$out[1..($out.count - 2)]
-			$flag++
+		else {
+			$out = (Invoke-Nxql -ServerName $engine.address `
+					-PortNumber $webapiPort `
+					-credentials $credentials `
+					-Query $Query)
+			$out.Split("`n")[1..($out.Split("`n").count - 2)]
 		}
-		
+		$counter = 1
 	}
 };
 function Invoke-HashTableSort {
@@ -330,7 +328,6 @@ None
 		[Parameter(Mandatory = $true)]
 		[String] $DestinationFile
 	)
-	Write-Host "...Updating Excel file..."
 	# Test if file already exist
 	if ((Test-Path -Path $DestinationFile) -eq $true) {
 		Remove-item -path $DestinationFile -Confirm:$false -Force
@@ -341,14 +338,14 @@ None
 	$excel = New-Object -ComObject Excel.Application
 	$excel.Visible = $false
 	$excel.DisplayAlerts = $false
-	Start-Sleep -Seconds 5
+	Start-Sleep -Seconds 2
 	# Open Excel file
 	$work = $excel.Workbooks.Open($DestinationFile)
-	Start-Sleep -Seconds 15
+	Start-Sleep -Seconds 2
 	$connections = $work.connections
 	# Refresh existing Table Queries
 	$work.RefreshAll()
-	Start-Sleep -Seconds 30
+	Start-Sleep -Seconds 10
 	while ($connections | ForEach-Object { if ($_.OLEDBConnection.Refreshing) { $true } }) {
 		Start-Sleep -Milliseconds 500
 	}
@@ -363,7 +360,6 @@ None
 			$pivots.Item($i).RefreshTable() | Out-Null
 		}
 	}
-	Start-Sleep -Seconds 5
 	# Get number of Table Queries
 	$num_of_queries_to_delete = ($work.Queries).Count
 	# Brake All Table Queries
@@ -371,7 +367,6 @@ None
 		$work.Queries.Item(1).Delete()
 	}
 	# Save all done work and close file and Application
-	Start-Sleep -Seconds 15
 	$work.Save()
 	$work.Close()
 	$excel.Quit()
@@ -619,11 +614,8 @@ PSCustomObject
 		[Parameter(Mandatory = $false)]
 		[switch]$Descending,
 		[Parameter(Mandatory = $false)]
-		[switch]$DateTime,
-		[Parameter(Mandatory = $false)]
-		[String]$Title
+		[switch]$DateTime
 	)
-	Write-Host "...Removing duplicates..."
 	$Hash = @{}
 	$ErrorActionPreference = 'SilentlyContinue'
 	Switch ($true) {
