@@ -180,6 +180,7 @@ String
 	$flag = 0
 	$counter = 0
 	foreach ($engine in $EngineList) {
+		$counter++
 		if ($Title) {
 			[int]$Progress = $counter * (100 / $EngineList.Count)
 			Write-Progress -Activity $Title -Status "$Progress% Complete:" -PercentComplete $Progress
@@ -197,7 +198,7 @@ String
 			$out[1..($out.count - 2)]
 			$flag++
 		}
-		$counter++
+		
 	}
 };
 function Invoke-HashTableSort {
@@ -334,6 +335,9 @@ None
 		[Parameter(Mandatory = $true)]
 		[String] $DestinationFile
 	)
+	$Title = "Updating: " + ($DestinationFile.Split("\")[$DestinationFile.Split("\").count - 1])
+	$Value = 0
+	Write-Progress -Activity $Title -Status "$Value% Complete:" -PercentComplete $Value
 	# Test if file already exist
 	if ((Test-Path -Path $DestinationFile) -eq $true) {
 		Remove-item -path $DestinationFile -Confirm:$false -Force
@@ -345,17 +349,23 @@ None
 	$excel.Visible = $false
 	$excel.DisplayAlerts = $false
 	Start-Sleep -Seconds 2
+	$Value = 15
+	Write-Progress -Activity $Title -Status "$Value% Complete:" -PercentComplete $Value
 	# Open Excel file
 	$work = $excel.Workbooks.Open($DestinationFile)
 	Start-Sleep -Seconds 2
 	$connections = $work.connections
 	# Refresh existing Table Queries
+	$Value = 35
+	Write-Progress -Activity $Title -Status "$Value% Complete:" -PercentComplete $Value
 	$work.RefreshAll()
 	Start-Sleep -Seconds 10
 	while ($connections | ForEach-Object { if ($_.OLEDBConnection.Refreshing) { $true } }) {
 		Start-Sleep -Milliseconds 500
 	}
 	Start-Sleep -Seconds 10
+	$Value = 65
+	Write-Progress -Activity $Title -Status "$Value% Complete:" -PercentComplete $Value
 	# Get list of available sheets in file
 	$list_sheets = $work.Worksheets | Select-Object name, index
 	# For Each sheet update Pivot table if exist
@@ -366,13 +376,19 @@ None
 			$pivots.Item($i).RefreshTable() | Out-Null
 		}
 	}
+	$Value = 75
+	Write-Progress -Activity $Title -Status "$Value% Complete:" -PercentComplete $Value
 	# Get number of Table Queries
 	$num_of_queries_to_delete = ($work.Queries).Count
 	# Brake All Table Queries
 	for ($i = 1; $i -le $num_of_queries_to_delete; $i++) {
 		$work.Queries.Item(1).Delete()
 	}
+	$Value = 95
+	Write-Progress -Activity $Title -Status "$Value% Complete:" -PercentComplete $Value
 	# Save all done work and close file and Application
+	$Value = 100
+	Write-Progress -Activity $Title -Status "$Value% Complete:" -PercentComplete $Value
 	$work.Save()
 	$work.Close()
 	$excel.Quit()
@@ -620,16 +636,25 @@ PSCustomObject
 		[Parameter(Mandatory = $false)]
 		[switch]$Descending,
 		[Parameter(Mandatory = $false)]
-		[switch]$DateTime
+		[switch]$DateTime,
+		[Parameter(Mandatory = $false)]
+		[String]$Title
 	)
 	$Hash = @{}
 	$ErrorActionPreference = 'SilentlyContinue'
+	$counter = 0
+	$Completed = $SourceTable.Count
 	Switch ($true) {
 		($ColumnNameSort -and $DateTime -and $Descending) {
 			$SourceTable | Sort-Object -property { [System.DateTime]::ParseExact($_.$ColumnNameSort, "yyyy-MM-dd'T'HH:mm:ss", $null) } -Descending `
 			| ForEach-Object {
 				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
 					$Hash.Add($_.$ColumnNameGroup, $_)
+				}
+				$counter++
+				if ($Title) {
+					[int]$value = ($counter * (100 / $Completed))
+					Write-Progress -Activity $Title -Status "$value% Complete:" -PercentComplete  $value
 				}
 			}
 		}
@@ -639,6 +664,11 @@ PSCustomObject
 				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
 					$Hash.Add($_.$ColumnNameGroup, $_)
 				}
+				$counter++
+				if ($Title) {
+					[int]$value = ($counter * (100 / $Completed))
+					Write-Progress -Activity $Title -Status "$value% Complete:" -PercentComplete  $value
+				}
 			}
 		}
 		($ColumnNameSort -and $Descending) {
@@ -646,6 +676,11 @@ PSCustomObject
 			| ForEach-Object {
 				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
 					$Hash.Add($_.$ColumnNameGroup, $_)
+				}
+				$counter++
+				if ($Title) {
+					[int]$value = ($counter * (100 / $Completed))
+					Write-Progress -Activity $Title -Status "$value% Complete:" -PercentComplete  $value
 				}
 			}
 		}
@@ -655,6 +690,11 @@ PSCustomObject
 				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
 					$Hash.Add($_.$ColumnNameGroup, $_)
 				}
+				$counter++
+				if ($Title) {
+					[int]$value = ($counter * (100 / $Completed))
+					Write-Progress -Activity $Title -Status "$value% Complete:" -PercentComplete  $value
+				}
 			}
 		}
 		Default {
@@ -662,6 +702,11 @@ PSCustomObject
 			| ForEach-Object {
 				if (-not($Hash.ContainsKey($_.$ColumnNameGroup))) {
 					$Hash.Add($_.$ColumnNameGroup, $_)
+				}
+				$counter++
+				if ($Title) {
+					[int]$value = ($counter * (100 / $Completed))
+					Write-Progress -Activity $Title -Status "$value% Complete:" -PercentComplete  $value
 				}
 			}
 		}
@@ -863,4 +908,25 @@ function Convert-FromHashtableToCsv {
 		$csv
 	}
 }
-
+function Invoke-WelcomeMessage {
+	param (
+		[Parameter(Mandatory = $true)]
+		$Title,
+		[Parameter(Mandatory = $false)]
+		[switch]$Initial
+	)
+	$Title = "-------- " + $Title + " --------"
+	$line = ""
+	for ($i = 0; $i -lt $Title.Length; $i++) {
+		$line += "-"
+	}
+	Clear-Host
+	if (-not $Initial) {
+		for ($i = 0; $i -lt 9; $i++) {
+			Write-Host ""
+		}
+	}
+	Write-Host $line
+	Write-Host $Title
+	Write-Host $line
+}
