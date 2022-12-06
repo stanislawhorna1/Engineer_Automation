@@ -173,25 +173,31 @@ String
 		[Parameter(Mandatory = $true)]
 		[String]$webapiPort,
 		[Parameter(Mandatory = $true)]
-		$EngineList
+		$EngineList,
+		[Parameter (Mandatory = $false)]
+		[String]$Title
 	)
+	$flag = 0
 	$counter = 0
 	foreach ($engine in $EngineList) {
-		if ($counter -eq 0) {
-			$out = (Invoke-Nxql -ServerName $engine.address `
-					-PortNumber $webapiPort `
-					-credentials $credentials `
-					-Query $Query)
-			$out.Split("`n")[0..($out.Split("`n").count - 2)]
+		if ($Title) {
+			[int]$Progress = $counter * (100 / $EngineList.Count)
+			Write-Progress -Activity $Title -Status "$Progress% Complete:" -PercentComplete $Progress
 		}
-		else {
-			$out = (Invoke-Nxql -ServerName $engine.address `
-					-PortNumber $webapiPort `
-					-credentials $credentials `
-					-Query $Query)
-			$out.Split("`n")[1..($out.Split("`n").count - 2)]
+		$out = (Invoke-Nxql -ServerName $engine.address `
+				-PortNumber $webapiPort `
+				-credentials $credentials `
+				-Query $Query)
+		$out = $out.Split("`n")		
+		if (($flag -eq 0) -and $out.count -gt 2) {
+			$out[0..($out.count - 2)]
+			$flag++
 		}
-		$counter = 1
+		if (($flag -ne 0) -and $out.count -gt 2) {
+			$out[1..($out.count - 2)]
+			$flag++
+		}
+		$counter++
 	}
 };
 function Invoke-HashTableSort {
