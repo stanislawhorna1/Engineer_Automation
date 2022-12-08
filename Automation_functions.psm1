@@ -910,8 +910,12 @@ Downloads file with given name from SharePoint URL
 SharePoint URL
 	Example: "https://atos365.sharepoint.com/sites/390000059"
 
+.PARAMETER SharePointLocation
+SharePoint Localization
+	Example: "Nexthink Reports\template"
+
 .PARAMETER FileName
-File name of file located on SharePoin
+File name of file located on SharePoint
 
 .PARAMETER DestinationPath
 Destination where file should be saved on the device
@@ -947,17 +951,43 @@ String
 }
 
 function Invoke-UploadSharePointFile {
+		<#
+.SYNOPSIS
+Uploads file from SharePoint Location
+
+.DESCRIPTION
+Uploads file with given name from SharePoint URL
+
+.PARAMETER URL
+SharePoint URL
+	Example: "https://atos365.sharepoint.com/sites/390000059"
+
+.PARAMETER SharePointLocation
+SharePoint Localization
+	Example: "Nexthink Reports\template"
+
+.PARAMETER SourcePath
+Source file from which file should be uploaded
+
+
+.INPUTS
+String
+
+
+
+.NOTES
+    Author:  Stanislaw Horna
+			 Pawel Bielinski
+#>
 	param (
 		[Parameter(Mandatory = $true)]
 		[String]$URL,
 		[Parameter(Mandatory = $true)]
 		[String]$SharePointLocation,
 		[Parameter(Mandatory = $true)]
-		[String]$FileName,
-		[Parameter(Mandatory = $true)]
-		[String]$DestinationPath
+		[String]$SourcePath
 	)
 	Connect-PnPOnline -Url $URL -UseWebLogin
-	
+	Add-PnPFile -Path $SourcePath -Folder $SharePointLocation
 	Disconnect-PnPOnline
 }
