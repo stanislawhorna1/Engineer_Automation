@@ -898,3 +898,66 @@ function Save-ErrorsToLogFile {
 	"Errors:`n" | Out-File $path -Append
 	$Error |Sort-Object -Unique |Out-File $path -Append
 }
+function Invoke-DownloadSharePointFile {
+	<#
+.SYNOPSIS
+Downloads file from SharePoint Location
+
+.DESCRIPTION
+Downloads file with given name from SharePoint URL
+
+.PARAMETER URL
+SharePoint URL
+	Example: "https://atos365.sharepoint.com/sites/390000059"
+
+.PARAMETER FileName
+File name of file located on SharePoin
+
+.PARAMETER DestinationPath
+Destination where file should be saved on the device
+
+
+.INPUTS
+String
+
+
+
+.NOTES
+    Author:  Stanislaw Horna
+			 Pawel Bielinski
+#>
+	param (
+		[Parameter(Mandatory = $true)]
+		[String]$URL,
+		[Parameter(Mandatory = $true)]
+		[String]$SharePointLocation,
+		[Parameter(Mandatory = $true)]
+		[String]$FileName,
+		[Parameter(Mandatory = $true)]
+		[String]$DestinationPath
+	)
+	Connect-PnPOnline -Url $URL -UseWebLogin
+	$ItemList = Get-PnPListItem -List $SharePointLocation
+	$FileToDownload = $ItemList | Where-Object {$_.FieldValues.FileLeafRef -eq $FileName}
+	$DestFileName = $DestinationPath.Split("\")[($DestinationPath.Split("\").count)-1]
+	$DestLocation = $DestinationPath.Split("\")[0..(($DestinationPath.Split("\").Count)-2)] -join "\"
+	$DestLocation += "\" 
+	Get-PnPFile -Url $FileToDownload['FileRef'] -Path $DestLocation -Filename $DestFileName -AsFile
+	Disconnect-PnPOnline
+}
+
+function Invoke-UploadSharePointFile {
+	param (
+		[Parameter(Mandatory = $true)]
+		[String]$URL,
+		[Parameter(Mandatory = $true)]
+		[String]$SharePointLocation,
+		[Parameter(Mandatory = $true)]
+		[String]$FileName,
+		[Parameter(Mandatory = $true)]
+		[String]$DestinationPath
+	)
+	Connect-PnPOnline -Url $URL -UseWebLogin
+	
+	Disconnect-PnPOnline
+}
