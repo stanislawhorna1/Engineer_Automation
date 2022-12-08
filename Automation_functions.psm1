@@ -346,7 +346,7 @@ None
 	# Refresh existing Table Queries
 	$work.RefreshAll()
 	Start-Sleep -Seconds 10
-	while ($connections | ForEach-Object { if ($_.OLEDBConnection.Refreshing) { $true } }) {
+	while ($connections | ForEach-Object { if ($_.OLEDBConnection.Refreshing) { -not $false } }) {
 		Start-Sleep -Milliseconds 500
 	}
 	Start-Sleep -Seconds 10
@@ -871,4 +871,23 @@ function Invoke-WelcomeMessage {
 	Write-Host $line
 	Write-Host $Title
 	Write-Host $line
+}
+
+function Save-ErrorsToLogFile {
+	param (
+		[Parameter(Mandatory = $true)]
+		$path,
+		[Parameter(Mandatory = $false)]
+		$Timer
+	)
+	if (Test-path -Path $path) {
+		Remove-Item -Path $path
+	}
+	$date = Get-Date
+	"Last script run ended $date" | Out-File $path
+	if ($Timer) {
+		$Timer.Elapsed | Out-File $path -Append
+	}
+	"Errors:`n" | Out-File $path -Append
+	$Error |Sort-Object -Unique |Out-File $path -Append
 }
