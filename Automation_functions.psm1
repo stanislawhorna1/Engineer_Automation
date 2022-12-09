@@ -982,11 +982,11 @@ Uploads file with given name from SharePoint URL
 
 .PARAMETER URL
 SharePoint URL
-	Example: "https://atos365.sharepoint.com/sites/390000059"
+Example: "https://atos365.sharepoint.com/sites/390000059"
 
 .PARAMETER SharePointLocation
 SharePoint Localization
-	Example: "Nexthink Reports\template"
+Example: "Nexthink Reports\template"
 
 .PARAMETER SourcePath
 Source file from which file should be uploaded
@@ -998,8 +998,8 @@ String
 
 
 .NOTES
-    Author:  Stanislaw Horna
-			 Pawel Bielinski
+Author:  Stanislaw Horna
+		 Pawel Bielinski
 #>
 	param (
 		[Parameter(Mandatory = $true)]
@@ -1013,9 +1013,7 @@ String
 
 	Connect-PnPOnline -Url $URL -UseWebLogin
 	$state = Add-PnPFile -Path $SourcePath -Folder $SharePointLocation
-	if ($null -eq $state) {
-		
+	if ($null -ne $state) {
+		Disconnect-PnPOnline
 	}
-	Disconnect-PnPOnline
-	
 }
