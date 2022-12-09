@@ -42,8 +42,26 @@ Hastable
 	$baseUrl = "https://$portal/api/configuration/v1/engines"
 	$result = $web.downloadString($baseUrl)
 	$engineList = $result | ConvertFrom-Json
+	$engineList = $engineList | Where-Object { $_.status -eq "CONNECTED" }
 	# Listing Connected Engines only
-	$engineList | Where-Object { $_.status -eq "CONNECTED" }
+	if ($portal -eq 'ministryofjustice.eu.nexthink.cloud') {
+		$FITS = ('engine-1', 'engine-2', 'engine-3', 'engine-4', 'engine-5', 'engine-6', 'engine-7', 'engine-8', 'engine-9')
+		$MOJO = ('engine-10', 'engine-11', 'engine-12', 'engine-13', 'engine-14')
+		$title = '   Environment'
+		$question = 'On which environment do you want to run query?'
+		$Choices = @(
+			[System.Management.Automation.Host.ChoiceDescription]::new("&FITS", "Environment managed by Atos")
+			[System.Management.Automation.Host.ChoiceDescription]::new("&MOJO", "Environment managed by MOJ")
+			[System.Management.Automation.Host.ChoiceDescription]::new("&ALL", "All environments visible in Nexthink")
+		)
+		$decision = $Host.UI.PromptForChoice($title, $question, $choices, 0)
+		if($decision -eq 0){
+			$engineList =$engineList | Where-Object {$_.name -in $FITS}
+		}elseif ($decision -eq 1) {
+			$engineList =$engineList | Where-Object {$_.name -in $MOJO}
+		}
+	}
+	$engineList
 };
 Function Invoke-Nxql {
 	<#
@@ -349,7 +367,7 @@ None
 	# Refresh existing Table Queries
 	$work.RefreshAll()
 	Start-Sleep -Seconds 30
-	while ($connections | ForEach-Object { if ($_.OLEDBConnection.Refreshing) {-not $false } }) {
+	while ($connections | ForEach-Object { if ($_.OLEDBConnection.Refreshing) { -not $false } }) {
 		Start-Sleep -Milliseconds 500
 	}
 	Start-Sleep -Seconds 10
@@ -619,9 +637,7 @@ PSCustomObject
 		[Parameter(Mandatory = $false)]
 		[switch]$Descending,
 		[Parameter(Mandatory = $false)]
-		[switch]$DateTime,
-		[Parameter(Mandatory = $false)]
-		[String]$Title
+		[switch]$DateTime
 	)
 	Write-Host "...Removing duplicates..."
 	$Hash = @{}
@@ -896,7 +912,7 @@ function Save-ErrorsToLogFile {
 		$Timer.Elapsed | Out-File $path -Append
 	}
 	"Errors:`n" | Out-File $path -Append
-	$Error |Sort-Object -Unique |Out-File $path -Append
+	$Error | Sort-Object -Unique | Out-File $path -Append
 }
 function Invoke-DownloadSharePointFile {
 	<#
@@ -940,18 +956,24 @@ String
 		[Parameter(Mandatory = $true)]
 		[String]$DestinationPath
 	)
+	Write-Host "...Downloading SharePoint file..."
+	if (Test-path -path $DestinationPath) {
+		Remove-Item -Path $DestinationPath -Confirm:$false -Force
+	}
 	Connect-PnPOnline -Url $URL -UseWebLogin
 	$ItemList = Get-PnPListItem -List $SharePointLocation
-	$FileToDownload = $ItemList | Where-Object {$_.FieldValues.FileLeafRef -eq $FileName}
-	$DestFileName = $DestinationPath.Split("\")[($DestinationPath.Split("\").count)-1]
-	$DestLocation = $DestinationPath.Split("\")[0..(($DestinationPath.Split("\").Count)-2)] -join "\"
+	$FileToDownload = $ItemList | Where-Object { $_.FieldValues.FileLeafRef -eq $FileName }
+	$DestFileName = $DestinationPath.Split("\")[($DestinationPath.Split("\").count) - 1]
+	$DestLocation = $DestinationPath.Split("\")[0..(($DestinationPath.Split("\").Count) - 2)] -join "\"
 	$DestLocation += "\" 
 	Get-PnPFile -Url $FileToDownload['FileRef'] -Path $DestLocation -Filename $DestFileName -AsFile
 	Disconnect-PnPOnline
+	
+	
 }
 
 function Invoke-UploadSharePointFile {
-		<#
+	<#
 .SYNOPSIS
 Uploads file from SharePoint Location
 
@@ -987,7 +1009,13 @@ String
 		[Parameter(Mandatory = $true)]
 		[String]$SourcePath
 	)
+	Write-Host "...Uploading SharePoint file..."
+
 	Connect-PnPOnline -Url $URL -UseWebLogin
-	Add-PnPFile -Path $SourcePath -Folder $SharePointLocation
+	$state = Add-PnPFile -Path $SourcePath -Folder $SharePointLocation
+	if ($null -eq $state) {
+		
+	}
 	Disconnect-PnPOnline
+	
 }
