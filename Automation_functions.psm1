@@ -55,10 +55,11 @@ Hastable
 			[System.Management.Automation.Host.ChoiceDescription]::new("&ALL", "All environments visible in Nexthink")
 		)
 		$decision = $Host.UI.PromptForChoice($title, $question, $choices, 0)
-		if($decision -eq 0){
-			$engineList =$engineList | Where-Object {$_.name -in $FITS}
-		}elseif ($decision -eq 1) {
-			$engineList =$engineList | Where-Object {$_.name -in $MOJO}
+		if ($decision -eq 0) {
+			$engineList = $engineList | Where-Object { $_.name -in $FITS }
+		}
+		elseif ($decision -eq 1) {
+			$engineList = $engineList | Where-Object { $_.name -in $MOJO }
 		}
 	}
 	$engineList
@@ -191,27 +192,36 @@ String
 		[Parameter(Mandatory = $true)]
 		[String]$webapiPort,
 		[Parameter(Mandatory = $true)]
-		$EngineList,
-		[Parameter (Mandatory = $false)]
-		[String]$Title
+		$EngineList
 	)
 	Write-Host "...Exporting data..."
 	$flag = 0
-	foreach ($engine in $EngineList) {
-		$out = (Invoke-Nxql -ServerName $engine.address `
-				-PortNumber $webapiPort `
-				-credentials $credentials `
-				-Query $Query)
-		$out = $out.Split("`n")		
-		if (($flag -eq 0) -and $out.count -gt 2) {
-			$out[0..($out.count - 2)]
-			$flag++
-		}
-		if (($flag -ne 0) -and $out.count -gt 2) {
-			$out[1..($out.count - 2)]
-			$flag++
-		}
+	if ($null -eq $EngineList.count) {
+		$out = (Invoke-Nxql -ServerName $EngineList.address `
+		-PortNumber $webapiPort `
+		-credentials $credentials `
+		-Query $Query)
+		$out = $out.Split("`n")
+		$out[0..($out.count - 2)]
+		$flag++
+	}
+ else {
+		foreach ($engine in $EngineList) {
+			$out = (Invoke-Nxql -ServerName $engine.address `
+					-PortNumber $webapiPort `
+					-credentials $credentials `
+					-Query $Query)
+			$out = $out.Split("`n")		
+			if (($flag -eq 0) -and $out.count -gt 2) {
+				$out[0..($out.count - 2)]
+				$flag++
+			}
+			if (($flag -ne 0) -and $out.count -gt 2) {
+				$out[1..($out.count - 2)]
+				$flag++
+			}
 		
+		}
 	}
 };
 function Invoke-HashTableSort {
@@ -1016,4 +1026,58 @@ Author:  Stanislaw Horna
 	if ($null -ne $state) {
 		Disconnect-PnPOnline
 	}
+}
+
+function Invoke-ExcelFileUpdatev2{
+	param (
+		[Parameter(Mandatory = $true)]
+		[string] $SourceFile,
+		[Parameter(Mandatory = $true)]
+		[String] $DestinationFile
+	)
+	Write-Host "...Updating Excel file..."
+	# Test if file already exist
+	if ((Test-Path -Path $DestinationFile) -eq $true) {
+		Remove-item -path $DestinationFile -Confirm:$false -Force
+	}
+	# Copy template to destination location
+	Copy-Item -Path $SourceFile -Destination $DestinationFile | Out-Null
+	# Open Excel App
+	$excel = New-Object -ComObject Excel.Application
+	 $excel.Visible = $true
+	# $excel.DisplayAlerts = $false
+	$work = $excel.Workbooks.Open($DestinationFile)
+	$connections = $work.connections
+	# Refresh existing Table Queries
+	foreach($con in $connections){
+		$con.Refresh()
+		while ($null -eq $excel.Ready) {
+			Start-Sleep -Milliseconds 500
+		}
+	}
+	$list_sheets = $work.Worksheets | Select-Object name, index
+	# For Each sheet update Pivot table if exist
+	foreach ($sheet in $list_sheets) {
+		$sh = $work.Worksheets.Item($sheet.Name)
+		$pivots = $sh.PivotTables()
+		for ($i = 1; $i -le $pivots.Count; $i++ ) {
+			$pivots.Item($i).RefreshTable() | Out-Null
+			while ($null -eq $excel.Ready) {
+				Start-Sleep -Milliseconds 500
+			}
+		}
+	}
+	# Get number of Table Queries
+	$num_of_queries_to_delete = ($work.Queries).Count
+	# Brake All Table Queries
+	for ($i = 1; $i -le $num_of_queries_to_delete; $i++) {
+		$work.Queries.Item(1).Delete()
+	}
+	while ($null -eq $excel.Ready) {
+		Start-Sleep -Milliseconds 500
+	}
+	# Save all done work and close file and Application
+	$work.Save()
+	$work.Close()
+	$excel.Quit()
 }
