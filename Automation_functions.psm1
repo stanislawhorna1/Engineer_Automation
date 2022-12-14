@@ -198,9 +198,9 @@ String
 	$flag = 0
 	if ($null -eq $EngineList.count) {
 		$out = (Invoke-Nxql -ServerName $EngineList.address `
-		-PortNumber $webapiPort `
-		-credentials $credentials `
-		-Query $Query)
+				-PortNumber $webapiPort `
+				-credentials $credentials `
+				-Query $Query)
 		$out = $out.Split("`n")
 		$out[0..($out.count - 2)]
 		$flag++
@@ -1028,7 +1028,7 @@ Author:  Stanislaw Horna
 	}
 }
 
-function Invoke-ExcelFileUpdatev2{
+function Invoke-ExcelFileUpdatev2 {
 	param (
 		[Parameter(Mandatory = $true)]
 		[string] $SourceFile,
@@ -1044,14 +1044,14 @@ function Invoke-ExcelFileUpdatev2{
 	Copy-Item -Path $SourceFile -Destination $DestinationFile | Out-Null
 	# Open Excel App
 	$excel = New-Object -ComObject Excel.Application
-	 $excel.Visible = $true
+	$excel.Visible = $true
 	# $excel.DisplayAlerts = $false
 	$work = $excel.Workbooks.Open($DestinationFile)
 	$connections = $work.connections
 	# Refresh existing Table Queries
-	foreach($con in $connections){
+	foreach ($con in $connections) {
 		$con.Refresh()
-		while ($null -eq $excel.Ready) {
+		while (($null -eq $excel.Ready) -or ($null -eq $con.OLEDBConnection.Refreshing)) {
 			Start-Sleep -Milliseconds 500
 		}
 	}
@@ -1066,6 +1066,9 @@ function Invoke-ExcelFileUpdatev2{
 				Start-Sleep -Milliseconds 500
 			}
 		}
+	}
+	while ($connections | ForEach-Object { if ($_.OLEDBConnection.Refreshing) { -not $false } }) {
+		Start-Sleep -Milliseconds 500
 	}
 	# Get number of Table Queries
 	$num_of_queries_to_delete = ($work.Queries).Count
