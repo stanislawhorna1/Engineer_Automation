@@ -758,16 +758,17 @@ PSCustomObject
 		}
 	}
 	else {
-		$out
+		$out = $out + "`n"
 		foreach ($item in $Hashtable.Keys) {
-			$out = "`"" + $item + "`","
+			$out = $out + "`"" + $item + "`","
 			for ($i = 0; $i -lt (($Hashtable.$item.Count) - 1); $i++) {
 				$out = $out + "`"" + $Hashtable.$item[$i] + "`","
 			}
-			$out = $out + "`"" + $Hashtable.$item[($Hashtable.$item.Count) - 1] + "`""
+			$out = $out + "`"" + $Hashtable.$item[($Hashtable.$item.Count) - 1] + "`"`n"
 			# Add-content $Path $out
-			$out
+
 		}
+		$out | ConvertFrom-Csv
 	}
 
 }
@@ -802,7 +803,7 @@ Generates Hash table with array in value
 	}
 	$hash	
 }
-function New-DataSummary {
+function New-DataSummaryAverageValue {
 	<#
 .SYNOPSIS
 Creates data summary in Hashtable
@@ -858,6 +859,76 @@ Hashtable
 		$hash_all.$Item[0] = [math]::Round((($hash_all.$Item[0] / $hash_all.$Item[1])), 3)
 	}
 	$hash_all
+}
+function New-DataSummaryCountValue {
+	<#
+.SYNOPSIS
+Creates data summary in Hashtable
+
+.DESCRIPTION
+Creates summary like Excel pivot table, based on table provided and selected columns
+
+.PARAMETER SourceTable
+Source data table
+
+.PARAMETER RowsColumn
+Simmilar to Excel PivotTable column, on which rows are created 
+
+.PARAMETER AverageColumn
+Vaule which is needed as a average for each unique value from RowsColumn
+
+.INPUTS
+Table
+String
+
+.OUTPUTS
+Hashtable
+
+.NOTES
+    Author:  Stanislaw Horna
+#>
+	param (
+		[Parameter(Mandatory = $true)]
+		$SourceTable,
+		[Parameter(Mandatory = $true)]
+		[String]$RowsColumn,
+		[Parameter(Mandatory = $false)]
+		[switch]$CsvFormat,
+		[Parameter(Mandatory = $false)]
+		$Headers
+	)
+	$hash_all = @{}
+	for ($j = 0; $j -lt $SourceTable.Count; $j++) {
+		# Get category name and extract stats as array (miliseconds)
+		$RowName = $SourceTable[$j].$RowsColumn
+		if (($RowName -ne "-") -and ($RowName.length -gt 2)) {
+			# If category was listed multiple times on one device sum time but do not increment number of devices
+			if ($RowName -in $hash_all.Keys) {
+				$hash_all.$RowName[0]++
+			}
+			else {
+				$hash_all.Add($RowName, @(1, 1))
+			}
+		}
+	}
+	$CountOfGrand = 0
+	foreach ($Item in $hash_all.Keys) {
+		$CountOfGrand += $hash_all.$Item[0]
+		$hash_all.$Item[1] = [math]::Round((($hash_all.$Item[0] / $SourceTable.Count)), 4)
+	}
+	$hash_all.Add("Grand Total", @($CountOfGrand , 1))
+	if ($CsvFormat) {
+		if ($null -eq $Headers) {
+			$Count = "Count of " + $RowsColumn
+			$Headers = @($RowsColumn, $Count, '%')
+		}
+		Export-HashTableToCsv -Hashtable $hash_all -Headers $Headers | `
+			Sort-Object { [int]$_.'Count of device/os_version_and_architecture' }
+	}
+	else {
+		$hash_all
+	}
+	
 }
 function Convert-FromCsvToHashtable {
 	param (
@@ -1083,4 +1154,28 @@ function Invoke-ExcelFileUpdatev2 {
 	$work.Save()
 	$work.Close()
 	$excel.Quit()
+}
+
+function Get-DeviceUptime {
+	param (
+		[Parameter(Mandatory = $true)]
+		$SourceTable
+	)
+	$hash_all = @{}
+	for ($j = 0; $j -lt $SourceTable.Count; $j++) {
+		$DeviceName = $SourceTable[$j].'device/name'
+		[long]$DeviceUptime = $SourceTable[$j].'uptime'
+		if ($DeviceName -in $hash_all.Keys) {
+			$hash_all.$DeviceName += $DeviceUptime
+		}
+		else {
+			$hash_all.Add($DeviceName, $DeviceUptime)
+		}
+	}
+	$SourceTable = Remove-Duplicates -SourceTable $SourceTable -ColumnNameGroup 'device/name' -ColumnNameSort 'uptime' -Descending
+	for ($j = 0; $j -lt $SourceTable.Count; $j++) {
+		$DeviceName = $SourceTable[$j].'device/name'
+		$SourceTable[$j].'uptime' = $hash_all.$DeviceName
+	}
+	$SourceTable
 }
