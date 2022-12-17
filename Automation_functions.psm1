@@ -463,7 +463,13 @@ PSCustomObject
 	[String]$temp_name = (65..90) | Get-Random -Count 5 | ForEach-Object { [char]$_ }
 	$temp_name = $temp_name.Replace(" ", "")
 	$temp_name = "C:\temp\" + $temp_name + ".csv"
+	while ($null -eq $excel.Ready) {
+		Start-Sleep -Milliseconds 500
+	}
 	$work.Sheets.Item($Sheet_name).SaveAs($temp_name, 6)
+	while ($null -eq $excel.Ready) {
+		Start-Sleep -Milliseconds 500
+	}
 	$work.Close()
 	$excel.Quit()
 	$csv = Import-Csv -Path $temp_name
