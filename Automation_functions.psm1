@@ -455,7 +455,7 @@ PSCustomObject
 		$work.RefreshAll()
 		# Wait until all tables will be refreshed
 		Start-Sleep -Seconds 2
-		while ($connections | ForEach-Object { if ($_.OLEDBConnection.Refreshing) { $true } }) {
+		while ($connections | ForEach-Object { if ($_.OLEDBConnection.Refreshing) { -not $false } }) {
 			Start-Sleep -Milliseconds 500
 		}
 		Start-Sleep -seconds 2
